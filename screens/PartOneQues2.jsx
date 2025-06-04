@@ -1,0 +1,173 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, PermissionsAndroid, Platform } from 'react-native';
+import axios from 'axios';
+import Geolocation from 'react-native-geolocation-service';
+
+const PartOneQues2 = ({ navigation, route }) => {
+  const { name, researcherMobile, formNumber } = route.params || {};
+
+   const [loading, setLoading] = useState(false); // <-- loading state added
+
+  const [location, setLocation] = useState({
+    latitude: null,
+    longitude: null,
+  });
+
+  // For Android: request location permission
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Access Required',
+            message: 'This app needs to access your location',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    } else {
+      // iOS automatically asks permission on geolocation request
+      return true;
+    }
+  };
+
+  useEffect(() => {
+  const getCurrentLocation = async () => {
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) {
+      Alert.alert('Permission denied', 'Location permission is required to get current location.');
+      return;
+    }
+
+    Geolocation.getCurrentPosition(
+      position => {
+        const { latitude, longitude } = position.coords;
+        setLocation({ latitude: latitude.toString(), longitude: longitude.toString() });
+      },
+      error => {
+        Alert.alert('Error', 'Unable to fetch location: ' + error.message);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+  };
+
+  getCurrentLocation();
+}, []);
+
+  const handleNext = async () => {
+    if (!location.latitude || !location.longitude) {
+      Alert.alert('Error', 'Location not available yet.');
+      return;
+    }
+
+    setLoading(true);  // start loading
+    try {
+      const payload = {
+        question: 'Latitude and Longitude',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        kmlName: name,
+        researcherMobile: Number(researcherMobile),
+        FormNo:String(formNumber)
+      };
+
+      const response = await axios.post('https://brandscore.in/api/Part1Question2', payload);
+          
+      if (response.data.success) {
+        console.log('Record saved:', response.data.data);
+        Alert.alert('Done', 'Data Submitted');
+        navigation.navigate('PartOneQues3', {
+          name,
+          researcherMobile,
+          formNumber
+        });
+      } else {
+        Alert.alert('Error', response.data.message);
+      }
+    } catch (error) {
+      console.error('API error:', error);
+      Alert.alert('API Error', error.message);
+    } finally {
+      setLoading(false);  // stop loading no matter what
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Question 2</Text>
+      <Text style={styles.title}>Latitude and Longitude</Text>
+      <Text style={styles.title}>(अक्षांश या देशांतर)</Text>
+
+      <View style={styles.infoBox}>
+        <Text style={styles.label}>Latitude (अक्षांश):</Text>
+        <Text style={styles.value}>{location.latitude ?? 'Fetching...'}</Text>
+      </View>
+
+      <View style={styles.infoBox}>
+        <Text style={styles.label}>Longitude (देशांतर):</Text>
+        <Text style={styles.value}>{location.longitude ?? 'Fetching...'}</Text>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.button, loading && { backgroundColor: '#ccc' }]}
+        onPress={handleNext}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>{loading ? 'Wait...' : 'Next Page'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+export default PartOneQues2;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  infoBox: {
+    marginBottom: 20,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    backgroundColor: '#f1f1f1',
+  },
+  label: {
+    fontSize: 16,
+    color: '#555',
+  },
+  value: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 4,
+  },
+  button: {
+    backgroundColor: '#28a745',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+  },
+});

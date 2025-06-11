@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import axios from 'axios';
+import { useFormData } from './FormDataContext'; // import the context
 
 const PartTwoQues1 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
-  
-    const [loading, setLoading] = useState(false);
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { formData: contextData, updateFormData } = useFormData();
+
   const [formData, setFormData] = useState({
-    question:'Information about the village',
+    id: contextData.PartTwoQues1?.id || 0,
+    question: 'Information about the village',
     villageName: '',
     panchayat: '',
     block: '',
@@ -22,8 +24,19 @@ const PartTwoQues1 = ({ navigation, route }) => {
     influentialCommunitiesAndCastes: '',
     ResearcherMobile: Number(researcherMobile),
     KmlName: name,
-    FormNo: formNumber
+    FormNo: formNumber,
+    State: selectedState,
+    Dist: selectedDistrict,
+    VillageName1: selectedVillage,
+    ShapeId: shapeId,
+    ...contextData.PartTwoQues1
   });
+
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    updateFormData('PartTwoQues1', formData);
+  }, [formData]);
 
   const questions = [
     { key: 'villageName', label: 'Name of the village (गांव का नाम)' },
@@ -37,14 +50,24 @@ const PartTwoQues1 = ({ navigation, route }) => {
   ];
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'internalDisputeInVillage' && value === 'No') {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+        internalDisputeInVillageDetails: ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const handleNext = async () => {
     setLoading(true);
-    // Check for empty required fields
+
     for (const field of [
-      
       'villageName',
       'panchayat',
       'block',
@@ -55,36 +78,54 @@ const PartTwoQues1 = ({ navigation, route }) => {
       'politicalInclination',
       'fiveMostInfluentialFamilies',
       'internalDisputeInVillage',
-      'influentialCommunitiesAndCastes']) {
+      'influentialCommunitiesAndCastes'
+    ]) {
       if (!formData[field]) {
         Alert.alert('Please fill in all the fields.');
+        setLoading(false);
         return;
       }
     }
 
-    // If dispute is 'Yes', details are required
     if (formData.internalDisputeInVillage === 'Yes' && !formData.internalDisputeInVillageDetails) {
       Alert.alert('Please provide details for the internal dispute.');
+      setLoading(false);
       return;
     }
 
     try {
-      // Send data to backend
-      const response = await axios.post('https://brandscore.in/api/TblPart2Question1', formData);
+      let apiUrl = '';
+      if (formData.id === 0) {
+        apiUrl = 'https://adfirst.in/api/TblPart2Question1/Insert';
+      } else {
+        apiUrl = 'https://adfirst.in/api/TblPart2Question1/Update';
+      }
+
+      const response = await axios.post(apiUrl, formData);
+
       if (response.data.success) {
-        Alert.alert('Data saved successfully!');
+        // Alert.alert('Data saved successfully!');
+        const updatedData = response.data.data;
+
+        setFormData(prev => ({ ...prev, ...updatedData }));
+        updateFormData('PartTwoQues1', updatedData);
+
         navigation.navigate('PartTwoQues2', {
-                name,
-                researcherMobile,
-                formNumber
-            });
+          name,
+          researcherMobile,
+          formNumber,
+          selectedState,
+          selectedDistrict,
+          selectedVillage,
+          shapeId
+        });
       } else {
         Alert.alert('Failed to save data.');
       }
     } catch (error) {
       console.error(error);
       Alert.alert('Error saving data:', error.message);
-    }finally {
+    } finally {
       setLoading(false);
     }
   };
@@ -95,7 +136,7 @@ const PartTwoQues1 = ({ navigation, route }) => {
       <Text style={styles.mainQuestion}>Information about the Village</Text>
       <Text style={styles.mainQuestion}>(गांव के बारे में जानकारी)</Text>
 
-      {questions.map((q, index) => (
+      {questions.map((q) => (
         <View key={q.key} style={styles.inputGroup}>
           <Text style={styles.label}>{q.label}</Text>
           <TextInput
@@ -103,12 +144,12 @@ const PartTwoQues1 = ({ navigation, route }) => {
             placeholder={`Answer for: ${q.label}`}
             value={formData[q.key]}
             onChangeText={(text) => handleChange(q.key, text)}
+            keyboardType={q.key === 'population' ? 'numeric' : 'default'}
           />
         </View>
       ))}
 
       <View style={styles.inputGroup}>
-        
         <Text style={styles.label}>Five most influential families in the panchayat</Text>
         <Text style={styles.label}>(पंचायत के 5 सबसे प्रभावशाली परिवार)</Text>
         <TextInput
@@ -170,8 +211,12 @@ const PartTwoQues1 = ({ navigation, route }) => {
         />
       </View>
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleNext} disabled={loading}>
-        <Text style={styles.submitButtonText}>{loading ? 'Submitting...' : 'Next Page'}</Text>
+      <TouchableOpacity
+        style={styles.submitButton}
+        onPress={handleNext}
+        disabled={loading}
+      >
+        <Text style={styles.submitButtonText}>{loading ? 'Wait...' : 'Next Page'}</Text>
       </TouchableOpacity>
     </ScrollView>
   );

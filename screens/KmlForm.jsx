@@ -1,134 +1,243 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  StyleSheet,
   TouchableOpacity,
+  TextInput,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
   Alert,
+  UIManager,
+  findNodeHandle,
 } from 'react-native';
 import axios from 'axios';
 
 const KmlForm = ({ route, navigation }) => {
-  const { researcherData } = route.params || {};
+  const { researcherData, } = route.params || {};
 
-  const [name, setName] = useState('');
   const [researcherMobile, setResearcherMobile] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [researcherName, setResearcherName] = useState('');
 
-  const [namesList, setNamesList] = useState([]);
-  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [selectedVillage, setSelectedVillage] = useState('');
+  const [shapeId, setShapeId] = useState('');
+
+  const [statesList, setStatesList] = useState([]);
+  const [districtsList, setDistrictsList] = useState([]);
+  const [villagesList, setVillagesList] = useState([]);
+
+  const [dropdownStatesVisible, setDropdownStatesVisible] = useState(false);
+  const [dropdownDistsVisible, setDropdownDistsVisible] = useState(false);
+  const [dropdownVillagesVisible, setDropdownVillagesVisible] = useState(false);
+
+  const [dropdownTop, setDropdownTop] = useState(0);
+
+  const stateRef = useRef(null);
+  const districtRef = useRef(null);
+  const villageRef = useRef(null);
 
   useEffect(() => {
     if (researcherData) {
-      setResearcherMobile(researcherData.researcherMobile || '');
-      fetchNames(researcherData.researcherMobile);
+      setResearcherName(researcherData.researcher_Name || '');
+      setResearcherMobile(researcherData.researcher_Mobile || '');
     }
-  }, [researcherData]);
 
-  const fetchNames = async (mobile) => {
+    fetchStates();
+  }, []);
+
+  const fetchStates = async () => {
     try {
-      const res = await axios.post(
-        'https://brandscore.in/api/KmlKm/GetNamesByMobile',
-        JSON.stringify(mobile),
-        {
-          headers: { 'Content-Type': 'application/json' },
+      const res = await axios.get('https://adfirst.in/api/VillageCsv/UniqueStates');
+      setStatesList(res.data.data || []);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Use the correct backend API with researcherMobile for districts
+  const fetchDistricts = async (state) => {
+    if (!researcherMobile) {
+      Alert.alert('Error', 'Researcher mobile is required to fetch districts.');
+      return;
+    }
+    try {
+      const res = await axios.get('https://adfirst.in/api/VillageCsv/FilteredUniqueDists', {
+        params: {
+          state: state,  // lowercase 'state'
+          researcherMobile: researcherMobile,  // camelCase
         }
+      });
+      setDistrictsList(res.data.data || []);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to load districts.');
+    }
+  };
+
+
+  const fetchVillages = async (dist) => {
+    if (!researcherMobile) {
+      Alert.alert('Error', 'Researcher mobile is required to fetch villages.');
+      return;
+    }
+    try {
+      const res = await axios.get(
+        `https://adfirst.in/api/VillageCsv/FilteredUniqueVillages?dist=${encodeURIComponent(dist)}&researcherMobile=${encodeURIComponent(researcherMobile)}`
       );
+      setVillagesList(res.data.data || []);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to load villages.');
+    }
+  };
 
-      console.log('API Response:', res.data);
-
-      const responseData = res.data.data;
-      if (Array.isArray(responseData)) {
-        setNamesList(responseData);
-      } else {
-        setNamesList([]);
+  const fetchVillageDetails = async (villageName) => {
+    try {
+      const res = await axios.get(`https://adfirst.in/api/VillageCsv/GetVillageDetails?villageName=${encodeURIComponent(villageName)}`);
+      const data = res.data.data;
+      if (Array.isArray(data) && data.length > 0) {
+        setShapeId(data[0].SHAPE_ID || '');
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Failed to fetch names.');
+      Alert.alert('Error', 'Failed to fetch village details.');
     }
+  };
+
+  const handleStateSelect = (state) => {
+    setSelectedState(state);
+    setSelectedDistrict('');
+    setSelectedVillage('');
+    setDistrictsList([]);
+    setVillagesList([]);
+    setDropdownStatesVisible(false);
+    fetchDistricts(state);
+  };
+
+  const handleDistrictSelect = (district) => {
+    setSelectedDistrict(district);
+    setSelectedVillage('');
+    setVillagesList([]);
+    setDropdownDistsVisible(false);
+    fetchVillages(district);
+  };
+
+  const handleVillageSelect = (village) => {
+    setSelectedVillage(village);
+    setDropdownVillagesVisible(false);
+    fetchVillageDetails(village);
   };
 
   const handleSubmit = () => {
-    if (!name || !researcherMobile) {
-      return Alert.alert('Validation Error', 'Please select a name.');
+    if (!selectedState || !selectedDistrict || !selectedVillage) {
+      Alert.alert('Validation Error', 'Please select state, district, and village.');
+      return;
     }
-
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
-
-    setTimeout(() => {
-      Alert.alert('Success', 'Data submitted successfully');
-      navigation.navigate('Select', {
-        name,
-        researcherMobile,
-      });
-      setIsSubmitting(false);
+    navigation.navigate('Select', {
+      selectedState,
+      selectedDistrict,
+      selectedVillage,
+      shapeId,
+      researcherMobile,
     });
   };
 
-  const renderDropdown = () => {
-    if (!dropdownVisible) return null;
+  // const measureDropdownTop = (ref) => {
+  //   if (ref.current) {
+  //     UIManager.measure(findNodeHandle(ref.current), (x, y, width, height, pageX, pageY) => {
+  //       setDropdownTop(pageY + height);
+  //     });
+  //   }
+  // };
+
+  const renderDropdown = (visible, list, onSelect) => {
+    if (!visible) return null;
     return (
-      <View style={styles.dropdown}>
-        {namesList.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.dropdownItem}
-            onPress={() => {
-              setName(item);
-              setDropdownVisible(false);
-            }}
-          >
-            <Text style={styles.dropdownItemText}>{item}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.dropdownWrapper}>
+        <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
+          {list.map((item, index) => (
+            <TouchableOpacity key={index} style={styles.dropdownItem} onPress={() => onSelect(item)}>
+              <Text style={styles.dropdownItemText}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
     );
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.heading}>KML Distance Form</Text>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Text style={styles.heading}>Welcome</Text>
+        <Text style={styles.headingname}>{researcherName}</Text>
 
-        <Text style={styles.label}>Select Name</Text>
+        <Text style={styles.label}>Select State</Text>
         <TouchableOpacity
+          ref={stateRef}
           style={styles.input}
-          onPress={() => setDropdownVisible(!dropdownVisible)}
+          onPress={() => {
+            setDropdownStatesVisible(!dropdownStatesVisible);
+            setDropdownDistsVisible(false);
+            setDropdownVillagesVisible(false);
+            // measureDropdownTop(stateRef);
+          }}
         >
-          <Text style={{ color: name ? '#000' : 'gray' }}>
-            {name || 'Select a name...'}
-          </Text>
+          <Text style={{ color: selectedState ? '#000' : 'gray' }}>{selectedState || 'Select a state...'}</Text>
         </TouchableOpacity>
+        {renderDropdown(dropdownStatesVisible, statesList, handleStateSelect)}
 
-        {renderDropdown()}
+        {selectedState ? (
+          <>
+            <Text style={styles.label}>Select District</Text>
+            <TouchableOpacity
+              ref={districtRef}
+              style={styles.input}
+              onPress={() => {
+                setDropdownDistsVisible(!dropdownDistsVisible);
+                setDropdownStatesVisible(false);
+                setDropdownVillagesVisible(false);
+                // measureDropdownTop(districtRef);
+              }}
+            >
+              <Text style={{ color: selectedDistrict ? '#000' : 'gray' }}>{selectedDistrict || 'Select a district...'}</Text>
+            </TouchableOpacity>
+            {renderDropdown(dropdownDistsVisible, districtsList, handleDistrictSelect)}
+          </>
+        ) : null}
+
+        {selectedDistrict ? (
+          <>
+            <Text style={styles.label}>Select Village</Text>
+            <TouchableOpacity
+              ref={villageRef}
+              style={styles.input}
+              onPress={() => {
+                setDropdownVillagesVisible(!dropdownVillagesVisible);
+                setDropdownStatesVisible(false);
+                setDropdownDistsVisible(false);
+                // measureDropdownTop(villageRef);
+              }}
+            >
+              <Text style={{ color: selectedVillage ? '#000' : 'gray' }}>{selectedVillage || 'Select a village...'}</Text>
+            </TouchableOpacity>
+            {renderDropdown(dropdownVillagesVisible, villagesList, handleVillageSelect)}
+          </>
+        ) : null}
 
         <Text style={styles.label}>Researcher Mobile</Text>
         <TextInput
           style={styles.input}
-          placeholder="Enter Researcher Mobile"
+          placeholder="Researcher Mobile"
           placeholderTextColor="gray"
           value={researcherMobile}
           editable={false}
         />
 
-        <TouchableOpacity
-          style={[styles.button, { opacity: isSubmitting ? 0.6 : 1 }]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
-          <Text style={styles.buttonText}>
-            {isSubmitting ? 'Wait...' : 'Submit'}
-          </Text>
+        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+          <Text style={styles.buttonText}>Next</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -144,16 +253,23 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   heading: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 30,
+    color: '#333',
+  },
+  headingname: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 40,
     color: '#333',
   },
   label: {
     fontSize: 16,
     marginBottom: 6,
     color: '#444',
+    fontWeight: 'bold',
   },
   input: {
     borderWidth: 1,
@@ -176,12 +292,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  dropdown: {
+  dropdownContainer: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+  },
+  dropdownScroll: {
+    maxHeight: 200,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 6,
-    maxHeight: 150,
-    marginBottom: 20,
+    backgroundColor: '#fff',
   },
   dropdownItem: {
     padding: 10,
@@ -192,4 +314,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
   },
+  dropdownWrapper: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 6,
+  backgroundColor: '#fff',
+  maxHeight: 200,
+  marginBottom: 20,
+},
+dropdownScroll: {
+  maxHeight: 200,
+},
 });

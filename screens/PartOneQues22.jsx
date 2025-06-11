@@ -11,22 +11,42 @@ import {
 } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import axios from 'axios';
+import { useFormData } from './FormDataContext';
 
 const PartOneQues22 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
-      const [isSubmitting, setIsSubmitting] = useState(false);
-  const [railwayLine, setRailwayLine] = useState('');
-  const [location, setLocation] = useState({ latitude: null, longitude: null });
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { formData, updateFormData } = useFormData();
+
+  const [railwayLine, setRailwayLine] = useState(formData.part1question22.railwayLine || '');
+  const [location, setLocation] = useState({
+    latitude: formData.part1question22.latitude,
+    longitude: formData.part1question22.longitude,
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     requestLocationPermission();
   }, []);
 
+  useEffect(() => {
+    if (railwayLine === 'Yes') {
+      updateFormData('part1question22', { latitude: location.latitude, longitude: location.longitude });
+    } else {
+      // Clear lat/long in context when railwayLine is No
+      updateFormData('part1question22', { latitude: null, longitude: null });
+    }
+  }, [location, railwayLine]);
+
+
+  useEffect(() => {
+    updateFormData('part1question22', { latitude: location.latitude, longitude: location.longitude });
+  }, [location]);
+
   const requestLocationPermission = async () => {
     try {
       if (Platform.OS === 'android') {
         const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
         );
         if (granted === PermissionsAndroid.RESULTS.GRANTED) {
           getCurrentLocation();
@@ -44,21 +64,23 @@ const PartOneQues22 = ({ navigation, route }) => {
   const getCurrentLocation = () => {
     Geolocation.getCurrentPosition(
       (position) => {
-        setLocation({
+        const coords = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-        });
+        };
+        setLocation(coords);
       },
       (error) => {
         console.warn(error.code, error.message);
         Alert.alert('Error', 'Unable to get location');
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
     );
   };
 
   const handleNext = async () => {
     setIsSubmitting(true);
+
     const payload = {
       Question: 'Railway line',
       Answer: railwayLine,
@@ -67,21 +89,47 @@ const PartOneQues22 = ({ navigation, route }) => {
       Researcher_Mobile: Number(researcherMobile),
       Kml_Name: name,
       Form_No: formNumber,
+      Dist: selectedDistrict,
+      State: selectedState,
+      Village_Name: selectedVillage,
+      Shape_Id: shapeId,
     };
 
     try {
-      await axios.post('https://brandscore.in/api/Part1Question22', payload);
-      Alert.alert('Success', 'Data submitted successfully');
+      let response;
+
+      if (formData.part1question22?.id) {
+        // We have an ID, so update existing record
+        response = await axios.post(
+          `https://adfirst.in/api/Part1Question22/update/${formData.part1question22.id}`,
+          { ...payload, Id: formData.part1question22.id } // make sure Id is included in body
+        );
+      } else {
+        // No ID, create new record
+        response = await axios.post('https://adfirst.in/api/Part1Question22', payload);
+      }
+
+      // Save returned id in context (update or new)
+      const returnedId = response.data.data?.Id ?? response.data.id ?? response.data.Id;
+      if (returnedId) {
+        updateFormData('part1question22', { id: returnedId });
+      }
+
+      // Alert.alert('Success', 'Data submitted successfully');
       navigation.navigate('PartOneQues23', {
         name,
         researcherMobile,
-        formNumber
+        formNumber,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId
       });
     } catch (error) {
       console.error('Error posting data:', error);
       Alert.alert('Error', 'Failed to submit data');
-    }finally {
-      setIsSubmitting(false); // Re-enable the button
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -95,7 +143,10 @@ const PartOneQues22 = ({ navigation, route }) => {
 
       <TouchableOpacity
         style={[styles.optionButton, railwayLine === 'No' && styles.selectedOption]}
-        onPress={() => setRailwayLine('No')}
+        onPress={() => {
+          setRailwayLine('No');
+          setLocation({ latitude: null, longitude: null }); // clear location when No selected
+        }}
       >
         <Text style={[styles.optionText, railwayLine === 'No' && styles.selectedText]}>
           No (नहीं)
@@ -114,12 +165,8 @@ const PartOneQues22 = ({ navigation, route }) => {
       {railwayLine === 'Yes' && (
         <View style={styles.geoContainer}>
           <Text style={styles.geoLabel}>Geo coordinates:</Text>
-          <Text style={styles.geoValue}>
-            Latitude: {location.latitude ?? 'Loading...'}
-          </Text>
-          <Text style={styles.geoValue}>
-            Longitude: {location.longitude ?? 'Loading...'}
-          </Text>
+          <Text style={styles.geoValue}>Latitude: {location.latitude ?? 'Loading...'}</Text>
+          <Text style={styles.geoValue}>Longitude: {location.longitude ?? 'Loading...'}</Text>
         </View>
       )}
 
@@ -136,6 +183,7 @@ const PartOneQues22 = ({ navigation, route }) => {
 
 export default PartOneQues22;
 
+// styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     padding: 24,

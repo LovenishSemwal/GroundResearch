@@ -1,6 +1,6 @@
 import { ScrollView } from 'react-native';
 import axios from 'axios';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -11,35 +11,94 @@ import {
     Platform,
     Alert
 } from 'react-native';
+import { useFormData } from './FormDataContext';  // import the context
 
 const PartOneQues14 = ({ navigation, route }) => {
-    const { name, researcherMobile, formNumber } = route.params || {};
-    const [selectedOption, setSelectedOption] = useState('');
-    const [details, setDetails] = useState('');
-    const [loading, setLoading] = useState(false); // Add loading state
+    const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+    const { formData, updateFormData } = useFormData(); // use the context
+    const [loading, setLoading] = useState(false);
+
+    // Use part1question14 data from context or fallback to empty
+    const initialSelectedOption = formData.part1question14?.selectedOption || '';
+    const initialDetails = formData.part1question14?.details || '';
+    const recordId = formData.part1question14?.id || null;
+
+    const [selectedOption, setSelectedOption] = useState(initialSelectedOption);
+    const [details, setDetails] = useState(initialDetails);
+
+    // Sync local state with context
+    useEffect(() => {
+        updateFormData('part1question14', {
+            selectedOption,
+            details,
+            id: recordId,  // keep id intact
+        });
+    }, [selectedOption, details]);
 
     const handleNext = async () => {
-        setLoading(true); // Start loading
+        setLoading(true);
+
+        const payload = {
+            Question: 'Does the area fall within a Defence Zone?',
+            Answer: selectedOption === 'Yes' ? `${selectedOption}: ${details}` : selectedOption,
+            Researcher_Mobile: Number(researcherMobile),
+            Kml_Name: name,
+            Form_No: formNumber,
+            State: selectedState,
+            Dist: selectedDistrict,
+            Village_Name: selectedVillage,
+            Shape_Id: shapeId
+        };
+
         try {
-            const response = await axios.post('https://brandscore.in/api/Part1Question14', {
-                Question: 'Does the area fall within a Defence Zone?',
-                Answer: selectedOption === 'Yes' ? `Yes - ${details}` : 'No',
-                Researcher_Mobile: Number(researcherMobile),
-                Kml_Name: name,
-                Form_No: formNumber,
-            });
-            Alert.alert('Data saved successfully!');
-            console.log('Saved:', response.data);
+            let response;
+
+            if (recordId) {
+                // Update existing record
+                response = await axios.post(
+                    `https://adfirst.in/api/Part1Question14/update/${recordId}`,
+                    { ...payload, Id: recordId },
+                    {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+            } else {
+                // Create new record
+                response = await axios.post(
+                    'https://adfirst.in/api/Part1Question14',
+                    payload,
+                    {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                // Save new id to context for future updates
+                if (response?.data?.id || response?.data?.Id) {
+                    const newId = response.data.id || response.data.Id;
+                    updateFormData('part1question14', { id: newId });
+                }
+            }
+
+            console.log('Data submitted:', response.data);
+            // Alert.alert('Data submitted successfully!');
             navigation.navigate('PartOneQues15', {
                 name,
                 researcherMobile,
-                formNumber
+                formNumber,
+                selectedState,
+                selectedDistrict,
+                selectedVillage,
+                shapeId
             });
         } catch (error) {
-            console.error('Error saving data:', error.message);
-            Alert.alert('Error saving data:', error.message);
+            Alert.alert('Error submitting data. Check console for details.');
+            console.error('Error submitting data:', error);
         } finally {
-            setLoading(false); // Stop loading
+            setLoading(false);
         }
     };
 
@@ -72,7 +131,9 @@ const PartOneQues14 = ({ navigation, route }) => {
                     ]}
                     onPress={() => setSelectedOption('No')}
                 >
-                    <Text style={styles.optionText}>No (नहीं)</Text>
+                    <Text style={[styles.optionText, selectedOption === 'No' && { color: '#fff' }]}>
+                        No (नहीं)
+                    </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -82,7 +143,9 @@ const PartOneQues14 = ({ navigation, route }) => {
                     ]}
                     onPress={() => setSelectedOption('Yes')}
                 >
-                    <Text style={styles.optionText}>Yes (हाँ)</Text>
+                    <Text style={[styles.optionText, selectedOption === 'Yes' && { color: '#fff' }]}>
+                        Yes (हाँ)
+                    </Text>
                 </TouchableOpacity>
 
                 {selectedOption === 'Yes' && (
@@ -107,7 +170,7 @@ const PartOneQues14 = ({ navigation, route }) => {
                         disabled={!isNextEnabled || loading}
                     >
                         <Text style={styles.nextButtonText}>
-                            {loading ? 'wait...' : 'Next Page'}
+                            {loading ? 'Wait...' : 'Next Page'}
                         </Text>
                     </TouchableOpacity>
                 )}
@@ -141,7 +204,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#007bff',
     },
     optionText: {
-        color: '#fff',
+        color: '#000',
         fontSize: 16,
         textAlign: 'center',
     },

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import axios from 'axios';
+import { useFormData } from './FormDataContext'; // context hook
 
 const options = [
   { id: 'a', label: 'Sandy (रेतीली)' },
@@ -11,39 +12,90 @@ const options = [
 ];
 
 const PartOneQues6 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId  } = route.params || {};
+  const pageKey = 'part1question6';
+  const { formData, updateFormData } = useFormData();
 
-  const { control, handleSubmit, watch } = useForm({
-    defaultValues: { answer: null }
+  const { control, handleSubmit, setValue, watch } = useForm({
+    defaultValues: { answer: '' },
   });
 
   const selectedOption = watch('answer');
-  const [isSubmitting, setIsSubmitting] = useState(false); // <-- new state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Pre-fill answer if available
+  useEffect(() => {
+    if (formData.part1question6?.answer) {
+      setValue('answer', formData.part1question6.answer);
+    }
+  }, [formData.part1question6, setValue]);
 
   const onSubmit = async (data) => {
-    setIsSubmitting(true);  // <-- disable button right away
+    setIsSubmitting(true);
+    const pageKey = 'part1question6';
+    const postData = {
+      question: "How is the land?",
+      answer: data.answer,
+      Kml_Name: name,
+      Researcher_Mobile: Number(researcherMobile),
+      FormNo: formNumber,
+      State:selectedState,
+      Dist:selectedDistrict,
+      Village_Name:selectedVillage,
+      Shape_Id:shapeId
+    };
+
     try {
-      const payload = {
-        question: "How is the land?",
-        answer: data.answer,
-        Kml_Name: name,
-        Researcher_Mobile: Number(researcherMobile),
-        FormNo: formNumber
-      };
+      // Check if there's an existing record
+      const existingId = formData[pageKey]?.id;
+      let response;
 
-      const response = await axios.post("https://brandscore.in/api/Part1Question6", payload);
+      if (existingId) {
+        // Update existing record
+        response = await axios.post(
+          `https://adfirst.in/api/Part1Question6/update/${existingId}`,
+          { ...postData, id: existingId },
+          {
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      } else {
+        // Create new record
+        response = await axios.post(
+          'https://adfirst.in/api/Part1Question6',
+          postData,
+          {
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
 
-      if (response.status === 200) {
-        Alert.alert("Success", "Data saved successfully!");
-        navigation.navigate("PartOneQues7", { name, researcherMobile, formNumber });
+      if (response.data.success || response.status === 200) {
+        // Save to context with id
+        const savedData = response.data.data;
+        updateFormData(pageKey, {
+          answer: data.answer,
+          id: savedData.id,
+        });
+
+        // Alert.alert("Success", "Data saved successfully!");
+        navigation.navigate("PartOneQues7", {
+          name,
+          researcherMobile,
+          formNumber,
+          selectedState,
+          selectedDistrict,
+          selectedVillage,
+          shapeId
+        });
       } else {
         Alert.alert("Error", response.data.message || "Something went wrong.");
       }
     } catch (error) {
-      console.error("Axios Error:", error);
+      console.error("Axios Error:", error.response?.data || error.message);
       Alert.alert("Network Error", "Could not connect to the server.");
     } finally {
-      setIsSubmitting(false);  // <-- re-enable button after response/error
+      setIsSubmitting(false);
     }
   };
 
@@ -66,7 +118,11 @@ const PartOneQues6 = ({ navigation, route }) => {
                   styles.optionButton,
                   value === option.id && styles.optionButtonSelected,
                 ]}
-                onPress={() => onChange(option.id)}
+                onPress={() => {
+                  onChange(option.id);
+                  // Live update context (optional)
+                  updateFormData(pageKey, { answer: option.id });
+                }}
               >
                 <Text
                   style={[
@@ -88,10 +144,10 @@ const PartOneQues6 = ({ navigation, route }) => {
           (!selectedOption || isSubmitting) && styles.nextButtonDisabled,
         ]}
         onPress={handleSubmit(onSubmit)}
-        disabled={!selectedOption || isSubmitting} // disable while submitting
+        disabled={!selectedOption || isSubmitting}
       >
         <Text style={styles.nextButtonText}>
-          {isSubmitting ? "Wait..." : "Next Page"}  {/* show "Wait..." */}
+          {isSubmitting ? "Wait..." : "Next Page"}
         </Text>
       </TouchableOpacity>
     </View>
@@ -100,7 +156,6 @@ const PartOneQues6 = ({ navigation, route }) => {
 
 export default PartOneQues6;
 
-// Styles unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,

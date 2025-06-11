@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
   View,
@@ -11,46 +11,83 @@ import {
   StyleSheet,
   Alert
 } from 'react-native';
+import { useFormData } from './FormDataContext';
 
 const PartOneQues15 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
-  const [answer, setAnswer] = useState('');
-  const [personName, setPersonName] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [details, setDetails] = useState('');
-  const [loading, setLoading] = useState(false); // New: loading state
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { formData, updateFormData } = useFormData();
+
+  const existingData = formData.part1question15 || {};
+  const [answer, setAnswer] = useState(existingData.answer || '');
+  const [personName, setPersonName] = useState(existingData.personName || '');
+  const [mobileNumber, setMobileNumber] = useState(existingData.mobileNumber || '');
+  const [details, setDetails] = useState(existingData.details || '');
+  const [loading, setLoading] = useState(false);
+
+  // Update context on field change
+  useEffect(() => {
+    updateFormData('part1question15', {
+      id: existingData.id || null,
+      answer,
+      personName,
+      mobileNumber,
+      details,
+    });
+  }, [answer, personName, mobileNumber, details]);
 
   const handleNext = async () => {
-    setLoading(true); // Start loading
+    setLoading(true);
     try {
       const payload = {
         question: 'Is this land or the nearby land owned by any local leader or influential person?',
         answer: answer,
         researcher_Mobile: Number(researcherMobile),
         kml_Name: name,
-        Form_No: formNumber,
-        Name: answer === 'Yes' ? personName : null,  
+        Form_No: formNumber, State: selectedState,
+        Dist: selectedDistrict,
+        Village_Name: selectedVillage,
+        Shape_Id: shapeId,
+        Name: answer === 'Yes' ? personName : null,
         Mobile: answer === 'Yes' ? mobileNumber : null,
-        Details: answer === 'Yes' ? details : null
+        Details: answer === 'Yes' ? details : null,
       };
 
-      const response = await axios.post(
-        'https://brandscore.in/api/Part1Question15',
-        payload
-      );
+      let response;
 
-      console.log('Saved successfully:', response.data);
-      Alert.alert('Data submitted successfully!');
+      if (existingData.id) {
+        // UPDATE
+        payload.id = existingData.id;
+        response = await axios.post(
+          `https://adfirst.in/api/Part1Question15/update/${existingData.id}`,
+          payload
+        );
+        console.log('Updated successfully:', response.data);
+        Alert.alert('Data updated successfully!');
+      } else {
+        // CREATE
+        response = await axios.post(
+          'https://adfirst.in/api/Part1Question15',
+          payload
+        );
+        console.log('Saved successfully:', response.data);
+        // Alert.alert('Data submitted successfully!');
+        updateFormData('part1question15', { id: response.data.id }); // store new id
+      }
+
       navigation.navigate('PartOneQues16', {
         name,
         researcherMobile,
-        formNumber
+        formNumber,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId
       });
     } catch (error) {
-      console.error('Error saving data:', error.message);
+      console.error('Error submitting data:', error.message);
       Alert.alert('Error submitting data. Check console for details.');
     } finally {
-      setLoading(false); // Stop loading after completion
+      setLoading(false);
     }
   };
 
@@ -60,7 +97,7 @@ const PartOneQues15 = ({ navigation, route }) => {
         personName.trim().length > 0 &&
         mobileNumber.trim().length === 10 &&
         details.trim().length > 0))
-    && !loading; // Disable if loading
+    && !loading;
 
   return (
     <KeyboardAvoidingView
@@ -89,7 +126,7 @@ const PartOneQues15 = ({ navigation, route }) => {
             setMobileNumber('');
             setDetails('');
           }}
-          disabled={loading} // Disable while loading
+          disabled={loading}
         >
           <Text style={styles.optionText}>No (नहीं)</Text>
         </TouchableOpacity>
@@ -97,7 +134,7 @@ const PartOneQues15 = ({ navigation, route }) => {
         <TouchableOpacity
           style={[styles.optionButton, answer === 'Yes' && styles.selectedOption]}
           onPress={() => setAnswer('Yes')}
-          disabled={loading} // Disable while loading
+          disabled={loading}
         >
           <Text style={styles.optionText}>Yes (हाँ)</Text>
         </TouchableOpacity>
@@ -110,7 +147,7 @@ const PartOneQues15 = ({ navigation, route }) => {
               value={personName}
               onChangeText={setPersonName}
               style={styles.input}
-              editable={!loading} // Disable while loading
+              editable={!loading}
             />
 
             <TextInput
@@ -121,7 +158,7 @@ const PartOneQues15 = ({ navigation, route }) => {
               keyboardType="numeric"
               maxLength={10}
               style={styles.input}
-              editable={!loading} // Disable while loading
+              editable={!loading}
             />
 
             <TextInput
@@ -132,7 +169,7 @@ const PartOneQues15 = ({ navigation, route }) => {
               multiline
               numberOfLines={4}
               style={[styles.input, styles.textArea]}
-              editable={!loading} // Disable while loading
+              editable={!loading}
             />
           </>
         )}
@@ -143,7 +180,7 @@ const PartOneQues15 = ({ navigation, route }) => {
           disabled={!isNextEnabled}
         >
           <Text style={styles.nextButtonText}>
-            {loading ? 'Please wait...' : 'Next Page'}
+            {loading ? 'Wait...' : existingData.id ? 'Update & Next' : 'Next Page'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

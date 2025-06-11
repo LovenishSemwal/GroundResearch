@@ -2,18 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, PermissionsAndroid, Platform } from 'react-native';
 import axios from 'axios';
 import Geolocation from 'react-native-geolocation-service';
+import { useFormData } from './FormDataContext'; // import context hook
 
 const PartOneQues2 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { formData, updateFormData } = useFormData();
 
-   const [loading, setLoading] = useState(false); // <-- loading state added
-
+  const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState({
-    latitude: null,
-    longitude: null,
+    latitude: formData.part1question2?.latitude || null,
+    longitude: formData.part1question2?.longitude || null,
   });
 
-  // For Android: request location permission
   const requestLocationPermission = async () => {
     if (Platform.OS === 'android') {
       try {
@@ -33,33 +33,41 @@ const PartOneQues2 = ({ navigation, route }) => {
         return false;
       }
     } else {
-      // iOS automatically asks permission on geolocation request
-      return true;
+      return true; // iOS
     }
   };
 
   useEffect(() => {
-  const getCurrentLocation = async () => {
-    const hasPermission = await requestLocationPermission();
-    if (!hasPermission) {
-      Alert.alert('Permission denied', 'Location permission is required to get current location.');
-      return;
-    }
+    const getCurrentLocation = async () => {
+      const hasPermission = await requestLocationPermission();
+      if (!hasPermission) {
+        Alert.alert('Permission denied', 'Location permission is required to get current location.');
+        return;
+      }
 
-    Geolocation.getCurrentPosition(
-      position => {
-        const { latitude, longitude } = position.coords;
-        setLocation({ latitude: latitude.toString(), longitude: longitude.toString() });
-      },
-      error => {
-        Alert.alert('Error', 'Unable to fetch location: ' + error.message);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-    );
-  };
+      Geolocation.getCurrentPosition(
+        position => {
+          const { latitude, longitude } = position.coords;
+          const latStr = latitude.toString();
+          const lonStr = longitude.toString();
 
-  getCurrentLocation();
-}, []);
+          setLocation({ latitude: latStr, longitude: lonStr });
+
+          // Update formData context
+          updateFormData('part1question2', {
+            latitude: latStr,
+            longitude: lonStr,
+          });
+        },
+        error => {
+          Alert.alert('Error', 'Unable to fetch location: ' + error.message);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+      );
+    };
+
+    getCurrentLocation();
+  }, []);
 
   const handleNext = async () => {
     if (!location.latitude || !location.longitude) {
@@ -67,35 +75,70 @@ const PartOneQues2 = ({ navigation, route }) => {
       return;
     }
 
-    setLoading(true);  // start loading
-    try {
-      const payload = {
-        question: 'Latitude and Longitude',
-        latitude: location.latitude,
-        longitude: location.longitude,
-        kmlName: name,
-        researcherMobile: Number(researcherMobile),
-        FormNo:String(formNumber)
-      };
+    setLoading(true);
 
-      const response = await axios.post('https://brandscore.in/api/Part1Question2', payload);
-          
+    const payload = {
+      question: 'Latitude and Longitude',
+      latitude: location.latitude,
+      longitude: location.longitude,
+      kmlName: name,
+      researcherMobile: Number(researcherMobile),
+      State:selectedState,
+      Dist:selectedDistrict,
+      VillageName:selectedVillage,
+      ShapeId:shapeId,
+      FormNo: String(formNumber),
+    };
+
+    try {
+      const pageKey = 'part1question2';
+      const existingId = formData[pageKey]?.id;
+
+      let response;
+      if (existingId) {
+        // Update existing record via POST update
+        response = await axios.post(
+          `https://adfirst.in/api/Part1Question2/update/${existingId}`,
+          { ...payload, id: existingId },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+      } else {
+        // Create new record via POST create
+        response = await axios.post(
+          'https://adfirst.in/api/Part1Question2',
+          payload,
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
       if (response.data.success) {
-        console.log('Record saved:', response.data.data);
-        Alert.alert('Done', 'Data Submitted');
-        navigation.navigate('PartOneQues3', {
+        console.log('Response:', response.data.data);
+
+        // Update context with id and coordinates
+        updateFormData(pageKey, {
+          id: response.data.data.id,
+          latitude: location.latitude,
+          longitude: location.longitude,
+        });
+
+        // Alert.alert('Done', 'Data Submitted');
+        navigation.navigate('PartOneQues3', { 
           name,
           researcherMobile,
-          formNumber
-        });
+          formNumber,
+          selectedState,
+          selectedDistrict,
+          selectedVillage,
+          shapeId
+         });
       } else {
-        Alert.alert('Error', response.data.message);
+        Alert.alert('Error', response.data.message || 'Failed to submit data.');
       }
     } catch (error) {
-      console.error('API error:', error);
-      Alert.alert('API Error', error.message);
+      console.error('API error:', error.response?.data || error.message);
+      Alert.alert('API Error', 'Something went wrong while submitting.');
     } finally {
-      setLoading(false);  // stop loading no matter what
+      setLoading(false);
     }
   };
 

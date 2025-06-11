@@ -12,20 +12,22 @@ const LoginScreen = ({ navigation }) => {
       return true;
     });
 
-    return () => backHandler.remove(); 
-  }, []);  
+    return () => backHandler.remove();
+  }, []);
 
   const onSubmit = async (data) => {
-    setLoading(true); // Set loading to true
+    setLoading(true);
     try {
-      const response = await axios.get(`https://brandscore.in/api/KmlKm/Login`, {
-        params: { mobile: data.phone }
-      });
+      const response = await axios.post(
+        'https://adfirst.in/api/VillageCsv/LoginResearcher', // Change to POST and your correct endpoint
+        { mobile: data.phone } // Sending as POST body
+      );
 
       if (response.data.success) {
         console.log("Full response:", response.data);
         const researcherData = response.data.data;
-        Alert.alert('KMLForm', response.data.message);
+        // Alert.alert(JSON.stringify(researcherData))
+        // Alert.alert('KMLForm', response.data.message);
         navigation.navigate('KmlForm', { researcherData });
       } else {
         Alert.alert('Error', response.data.message || 'Invalid login');
@@ -37,7 +39,7 @@ const LoginScreen = ({ navigation }) => {
         Alert.alert('Error', 'Could not connect to the server');
       }
     } finally {
-      setLoading(false); // Reset loading to false
+      setLoading(false);
     }
   };
 
@@ -73,7 +75,7 @@ const LoginScreen = ({ navigation }) => {
       <TouchableOpacity
         style={[styles.button, loading && { backgroundColor: '#aaa' }]}
         onPress={handleSubmit(onSubmit)}
-        disabled={loading} // disable when loading is true
+        disabled={loading}
       >
         <Text style={styles.buttonText}>{loading ? 'Wait...' : 'Login'}</Text>
       </TouchableOpacity>

@@ -11,14 +11,19 @@ import {
 } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import axios from 'axios';
+import { useFormData } from './FormDataContext';
 
 const PartOneQues21 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
-    const [isSubmitting, setIsSubmitting] = useState(false);
-  const [roadCrossing, setRoadCrossing] = useState('');
-  const [roadType, setRoadType] = useState('');
-  const [latitude, setLatitude] = useState(null);
-  const [longitude, setLongitude] = useState(null);
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { formData, updateFormData } = useFormData();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [roadCrossing, setRoadCrossing] = useState(formData.part1question21.roadCrossing || '');
+  const [roadType, setRoadType] = useState(formData.part1question21.roadType || '');
+  const [latitude, setLatitude] = useState(formData.part1question21.latitude || null);
+  const [longitude, setLongitude] = useState(formData.part1question21.longitude || null);
+  const [recordId, setRecordId] = useState(formData.part1question21.id || null);
 
   const roadTypes = [
     'National Highway (राष्ट्रीय राजमार्ग )',
@@ -48,8 +53,11 @@ const PartOneQues21 = ({ navigation, route }) => {
 
     Geolocation.getCurrentPosition(
       (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
+        const lat = position.coords.latitude;
+        const long = position.coords.longitude;
+        setLatitude(lat);
+        setLongitude(long);
+        updateFormData('part1question21', { latitude: lat, longitude: long });
       },
       (error) => {
         console.log('Geolocation error:', error);
@@ -67,32 +75,75 @@ const PartOneQues21 = ({ navigation, route }) => {
     fetchLocation();
   }, []);
 
+  useEffect(() => {
+    updateFormData('part1question21', {
+      roadCrossing,
+      roadType,
+      latitude,
+      longitude,
+      id: recordId,
+    });
+  }, [roadCrossing, roadType, latitude, longitude, recordId]);
+
   const handleNext = async () => {
     setIsSubmitting(true);
-    try {
-      const dataToSend = {
-        Question: 'Road Crossing',
-        Answer: roadCrossing,
-        Lat: latitude,
-        Long: longitude,
-        Type_Of_Road: roadCrossing === 'Yes' ? roadType : null,
-        Researcher_Mobile: Number(researcherMobile),
-        Kml_Name: name,
-        Form_No: formNumber,
-      };
 
-      await axios.post('https://brandscore.in/api/Part1Question21', dataToSend);
-      Alert.alert('Success', 'Data submitted successfully');
+    const dataToSend = {
+      Id: Number(recordId), // explicitly convert to number
+      Question: 'Road Crossing',
+      Answer: roadCrossing,
+      Lat: Number(latitude),
+      Long: Number(longitude),
+      Type_Of_Road: roadCrossing === 'Yes' ? roadType : null,
+      Researcher_Mobile: Number(researcherMobile),
+      Kml_Name: name,
+      Form_No: Number(formNumber),
+      Dist: selectedDistrict,
+      State: selectedState,
+      Village_Name: selectedVillage,
+      Shape_Id: shapeId,
+    };
+
+    console.log('Updating with:', dataToSend);
+
+    try {
+      let response;
+
+      if (recordId) {
+        // Update
+        response = await axios.post(
+          `https://adfirst.in/api/Part1Question21/update/${recordId}`,
+          dataToSend
+        );
+        console.log('Update response:', response.data);
+        Alert.alert('Success', 'Data updated successfully');
+      } else {
+        // Create
+        response = await axios.post('https://adfirst.in/api/Part1Question21', dataToSend);
+        console.log('Create response:', response.data);
+
+        const newId = response.data.id || response.data.Id;
+        setRecordId(newId);
+        updateFormData('part1question21', { id: newId });
+
+        // Alert.alert('Success', 'Data submitted successfully');
+      }
+
       navigation.navigate('PartOneQues22', {
         name,
         researcherMobile,
-        formNumber
+        formNumber,
+        formNumber,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId
       });
     } catch (error) {
-      console.error('Failed to submit data:', error);
-      Alert.alert('Submission Failed', 'Unable to submit data to the server');
-    }finally {
-      setIsSubmitting(false); // Re-enable the button
+      console.error('Submission error:', error.response?.data || error.message);
+      Alert.alert('Submission Failed', 'Unable to submit or update data.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -102,12 +153,13 @@ const PartOneQues21 = ({ navigation, route }) => {
       <Text style={styles.question}>Road crossing</Text>
       <Text style={styles.question}>(सड़क क्रॉसिंग)</Text>
 
-      {/* Yes/No */}
       <TouchableOpacity
         style={[styles.optionButton, roadCrossing === 'No' && styles.selectedOption]}
         onPress={() => {
           setRoadCrossing('No');
           setRoadType('');
+          setLatitude(''); // RESET lat/lng
+          setLongitude(''); // RESET lat/lng
         }}
       >
         <Text style={[styles.optionText, roadCrossing === 'No' && styles.selectedText]}>
@@ -128,12 +180,8 @@ const PartOneQues21 = ({ navigation, route }) => {
         <>
           <View style={styles.geoContainer}>
             <Text style={styles.geoLabel}>Geo coordinates:</Text>
-            <Text style={styles.geoValue}>
-              Latitude: {latitude ?? 'Fetching...'}
-            </Text>
-            <Text style={styles.geoValue}>              
-              Longitude: {longitude ?? 'Fetching...'}
-            </Text>
+            <Text style={styles.geoValue}>Latitude: {latitude ?? 'Fetching...'}</Text>
+            <Text style={styles.geoValue}>Longitude: {longitude ?? 'Fetching...'}</Text>
           </View>
 
           <Text style={styles.subQuestion}>Type of Road</Text>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,8 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import { useFormData } from './FormDataContext';
 
-// Instead of a static object, use a function
 const createInitialForm = () => ({
   uniqueId: Date.now(),
   name: '',
@@ -24,14 +24,34 @@ const createInitialForm = () => ({
     cropImpact: false,
     pollution: false,
     other: false,
-    otherText: ''
-  }
+    otherText: '',
+  },
 });
 
 const PartTwoQues2 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
+  const {
+    name,
+    researcherMobile,
+    formNumber,
+    selectedState,
+    selectedDistrict,
+    selectedVillage,
+    shapeId,
+  } = route.params || {};
+  const { formData, updateFormData } = useFormData();
+
+  const [forms, setForms] = useState(() => {
+    if (formData.partTwoQues2Forms && Array.isArray(formData.partTwoQues2Forms)) {
+      return formData.partTwoQues2Forms;
+    }
+    return [createInitialForm()];
+  });
+
   const [loading, setLoading] = useState(false);
-  const [forms, setForms] = useState([createInitialForm()]); // Use fresh object
+
+  useEffect(() => {
+    updateFormData({ partTwoQues2Forms: forms });
+  }, [forms, updateFormData]);
 
   const handleChange = (index, field, value) => {
     const updated = [...forms];
@@ -46,11 +66,31 @@ const PartTwoQues2 = ({ navigation, route }) => {
   };
 
   const addForm = () => {
-    setForms([...forms, createInitialForm()]); // New fresh form
+    setForms([...forms, createInitialForm()]);
+  };
+
+  const removeForm = (index) => {
+    Alert.alert(
+      'Remove Form',
+      'Are you sure you want to remove this form?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            const updatedForms = forms.filter((_, i) => i !== index);
+            setForms(updatedForms);
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleNextPage = async () => {
     setLoading(true);
+
     for (let i = 0; i < forms.length; i++) {
       const form = forms[i];
       if (!form.name.trim()) {
@@ -86,9 +126,11 @@ const PartTwoQues2 = ({ navigation, route }) => {
     }
 
     try {
+      const updatedForms = [...forms];
       for (let i = 0; i < forms.length; i++) {
         const form = forms[i];
         const dataToSend = {
+          Id: form.id,
           Name: form.name,
           Position: form.designation,
           OpinionAboutTheProjectInVillage: form.opinion,
@@ -96,26 +138,54 @@ const PartTwoQues2 = ({ navigation, route }) => {
           ConcernsRegardingTheProject: JSON.stringify(form.concerns),
           ResearcherMobile: Number(researcherMobile),
           KmlName: name,
-          FormNo: formNumber
+          FormNo: formNumber,
+          State: selectedState,
+          Dist: selectedDistrict,
+          VillageName1: selectedVillage,
+          ShapeId: shapeId,
         };
 
-        const response = await fetch('https://brandscore.in/api/TblPart2Question2', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dataToSend),
-        });
+        let response;
+        if (form.id) {
+          response = await fetch(
+            `https://adfirst.in/api/TblPart2Question2/Update/${form.id}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(dataToSend),
+            }
+          );
+        } else {
+          response = await fetch('https://adfirst.in/api/TblPart2Question2/Insert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dataToSend),
+          });
+        }
 
         if (!response.ok) {
           const errorData = await response.text();
           throw new Error(`Form ${i + 1} submission failed: ${errorData}`);
         }
+
+        const result = await response.json();
+        if (!form.id && result.data && result.data.id) {
+          updatedForms[i].id = result.data.id;
+        }
       }
 
-      Alert.alert('Success', 'All data submitted successfully!');
+      setForms(updatedForms);
+      updateFormData({ partTwoQues2Forms: updatedForms });
+
+      // Alert.alert('Success', 'All data submitted successfully!');
       navigation.navigate('PartTwoQues3', {
         name,
         researcherMobile,
-        formNumber
+        formNumber,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId,
       });
     } catch (error) {
       console.error(error);
@@ -124,7 +194,7 @@ const PartTwoQues2 = ({ navigation, route }) => {
       setLoading(false);
     }
   };
-  
+
   const renderForm = (form, index) => (
     <View key={form.uniqueId} style={styles.formBlock}>
       <Text style={styles.subHeading}>Form {index + 1}</Text>
@@ -216,9 +286,7 @@ const PartTwoQues2 = ({ navigation, route }) => {
               handleConcernChange(index, key, !form.concerns[key])
             }
           >
-            <Text style={styles.checkboxMark}>
-              {form.concerns[key] ? '✓' : ''}
-            </Text>
+            <Text style={styles.checkboxMark}>{form.concerns[key] ? '✓' : ''}</Text>
           </TouchableOpacity>
           <Text style={styles.checkboxLabel}>{label}</Text>
         </View>
@@ -229,10 +297,17 @@ const PartTwoQues2 = ({ navigation, route }) => {
           style={styles.input}
           placeholder="Please specify other concerns"
           value={form.concerns.otherText}
-          onChangeText={(text) =>
-            handleConcernChange(index, 'otherText', text)
-          }
+          onChangeText={(text) => handleConcernChange(index, 'otherText', text)}
         />
+      )}
+
+      {forms.length > 1 && (
+        <TouchableOpacity
+          style={styles.removeButton}
+          onPress={() => removeForm(index)}
+        >
+          <Text style={styles.removeButtonText}>Remove This Form</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -249,8 +324,14 @@ const PartTwoQues2 = ({ navigation, route }) => {
         <Text style={styles.addButtonText}>+ Add More</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.nextButton} onPress={handleNextPage} disabled={loading}>
-        <Text style={styles.nextButtonText}>{loading ? 'Submitting...' : 'Next Page'}</Text>
+      <TouchableOpacity
+        style={styles.nextButton}
+        onPress={handleNextPage}
+        disabled={loading}
+      >
+        <Text style={styles.nextButtonText}>
+          {loading ? 'Wait...' : 'Next Page'}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -365,5 +446,16 @@ const styles = StyleSheet.create({
   nextButtonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  removeButton: {
+    backgroundColor: '#dc3545',
+    padding: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  removeButtonText: {
+    color: '#fff',
+    fontSize: 14,
   },
 });

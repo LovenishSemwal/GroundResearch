@@ -1,6 +1,6 @@
 import { ScrollView } from 'react-native';
 import axios from 'axios';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -11,51 +11,94 @@ import {
     Platform,
     Alert
 } from 'react-native';
+import { useFormData } from './FormDataContext';  // import the context
 
 const PartOneQues11 = ({ navigation, route }) => {
-    const { name, researcherMobile, formNumber } = route.params || {};
-    const [selectedOption, setSelectedOption] = useState('');
-    const [details, setDetails] = useState('');
-    const [loading, setLoading] = useState(false);  // <-- add loading state
+    const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+    const { formData, updateFormData } = useFormData(); // use the context
+    const [loading, setLoading] = useState(false);
+
+    // Use part1question11 data from context or fallback to empty
+    const initialSelectedOption = formData.part1question11?.selectedOption || '';
+    const initialDetails = formData.part1question11?.details || '';
+    const recordId = formData.part1question11?.id || null;
+
+    const [selectedOption, setSelectedOption] = useState(initialSelectedOption);
+    const [details, setDetails] = useState(initialDetails);
+
+    // Sync local state with context
+    useEffect(() => {
+        updateFormData('part1question11', {
+            selectedOption,
+            details,
+            id: recordId,  // keep id intact
+        });
+    }, [selectedOption, details]);
 
     const handleNext = async () => {
-        setLoading(true);  // disable button and show wait
-        // navigation.navigate('PartOneQues12', {
-        //         name,
-        //         researcherMobile,
-        //         formNumber
-        //     });
-        try {
-            const payload = {
-                Question: "Is there any dispute or legal case on the land?",
-                Answer: selectedOption === 'Yes' ? `${selectedOption}: ${details}` : selectedOption,
-                Researcher_Mobile: Number(researcherMobile),
-                Kml_Name: name,
-                Form_No: formNumber,
-            };
+        setLoading(true);
 
-            const response = await axios.post(
-                'https://brandscore.in/api/Part1Question11',
-                payload,
-                {
-                    headers: {
-                        'Content-Type': 'application/json'
+        const payload = {
+            Question: "Is there any dispute or legal case on the land?",
+            Answer: selectedOption === 'Yes' ? `${selectedOption}: ${details}` : selectedOption,
+            Researcher_Mobile: Number(researcherMobile),
+            Kml_Name: name,
+            Form_No: formNumber,
+            State: selectedState,
+            Dist: selectedDistrict,
+            Village_Name: selectedVillage,
+            Shape_Id: shapeId,
+        };
+
+        try {
+            let response;
+
+            if (recordId) {
+                // Update existing record
+                response = await axios.post(
+                    `https://adfirst.in/api/Part1Question11/update/${recordId}`,
+                    { ...payload, Id: recordId }, // pass id in body too
+                    {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
                     }
+                );
+            } else {
+                // Create new record
+                response = await axios.post(
+                    'https://adfirst.in/api/Part1Question11',
+                    payload,
+                    {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                // Save new id to context for future updates
+                if (response?.data?.id || response?.data?.Id) {
+                    const newId = response.data.id || response.data.Id;
+                    updateFormData('part1question11', { id: newId });
                 }
-            );
+            }
 
             console.log('Data submitted:', response.data);
-            Alert.alert('Data submitted successfully!');
+            // Alert.alert('Data submitted successfully!');
             navigation.navigate('PartOneQues12', {
                 name,
                 researcherMobile,
-                formNumber
+                formNumber,
+                selectedState,
+                selectedDistrict,
+                selectedVillage,
+                shapeId
             });
         } catch (error) {
             Alert.alert('Error submitting data. Check console for details.');
             console.error('Error submitting data:', error);
         } finally {
-            setLoading(false);  // re-enable button no matter success or failure
+            setLoading(false);
         }
     };
 
@@ -81,7 +124,6 @@ const PartOneQues11 = ({ navigation, route }) => {
                     (क्या जमीन पर कोई विवाद है या कानूनी केस है?)
                 </Text>
 
-
                 <TouchableOpacity
                     style={[
                         styles.optionButton,
@@ -89,7 +131,7 @@ const PartOneQues11 = ({ navigation, route }) => {
                     ]}
                     onPress={() => setSelectedOption('No')}
                 >
-                    <Text style={styles.optionText}>No (नहीं)</Text>
+                    <Text style={[styles.optionText, selectedOption === 'No' && { color: '#fff' }]}>No (नहीं)</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -99,13 +141,10 @@ const PartOneQues11 = ({ navigation, route }) => {
                     ]}
                     onPress={() => setSelectedOption('Yes')}
                 >
-                    <Text style={styles.optionText}>Yes (हाँ)</Text>
+                    <Text style={[styles.optionText, selectedOption === 'Yes' && { color: '#fff' }]}>Yes (हाँ)</Text>
                 </TouchableOpacity>
 
-
-
                 {selectedOption === 'Yes' && (
-
                     <TextInput
                         style={styles.textArea}
                         placeholder="Please provide details..."
@@ -124,7 +163,7 @@ const PartOneQues11 = ({ navigation, route }) => {
                             { opacity: isNextEnabled && !loading ? 1 : 0.5 },
                         ]}
                         onPress={handleNext}
-                        disabled={!isNextEnabled || loading}  // disable button when loading
+                        disabled={!isNextEnabled || loading}
                     >
                         <Text style={styles.nextButtonText}>
                             {loading ? 'Wait...' : 'Next Page'}
@@ -133,7 +172,6 @@ const PartOneQues11 = ({ navigation, route }) => {
                 )}
             </ScrollView>
         </KeyboardAvoidingView>
-
     );
 };
 
@@ -162,7 +200,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#007bff',
     },
     optionText: {
-        color: '#fff',
+        color: '#000',
         fontSize: 16,
         textAlign: 'center',
     },

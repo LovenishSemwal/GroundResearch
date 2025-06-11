@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +11,9 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import axios from 'axios';
 
+// Import your context hook
+import { useFormData } from './FormDataContext';  // import the context
+
 const optionsList = [
   'Legal disputes are ongoing in the area\n(क्षेत्र में कानूनी विवाद चल रहा है)',
   'There has been opposition to projects\n(परियोजनाओं का विरोध हुआ है)',
@@ -21,46 +23,107 @@ const optionsList = [
 ];
 
 const PartTwoQues8 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
-  
-      const [loading, setLoading] = useState(false);
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { formData, updateFormData } = useFormData();
+
+  const [loading, setLoading] = useState(false);
+
   const { control, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
-      selectedOptions: [],
+      selectedOptions: formData.part2question8.selectedOptions || [],
     },
   });
 
   const selectedOptions = watch('selectedOptions');
 
-  const toggleOption = option => {
+  useEffect(() => {
+    // Set form defaults from context when navigating back
+    if (formData.part2question8.selectedOptions) {
+      setValue('selectedOptions', formData.part2question8.selectedOptions);
+    }
+  }, [formData.part2question8.selectedOptions, setValue]);
+
+  const toggleOption = (option) => {
     const newSelected = selectedOptions.includes(option)
-      ? selectedOptions.filter(o => o !== option)
+      ? selectedOptions.filter((o) => o !== option)
       : [...selectedOptions, option];
     setValue('selectedOptions', newSelected);
   };
 
   const onSubmit = async (data) => {
-        setLoading(true);
-    try {
-      // Prepare payload to send to backend
-      const payload = {
-        Question: "It is the land area through which the transmission line will pass. Here, our objective is to identify the villages and areas where the project team might face opposition. According to you, in which category should this village be placed?",
-        Answer: data.selectedOptions.join('; '), 
-        Kml_Name: name,
-        Researcher_Mobile: Number(researcherMobile),
-        Form_No: formNumber
-      };
+    setLoading(true);
 
-      const response = await axios.post('https://brandscore.in/api/Part2Question8', payload);
-      console.log('Response from backend:', response.data);
-      Alert.alert('Data Submitted!')
-      navigation.navigate('PartTwoQues9', { name, researcherMobile, formNumber });
+    // Save data to context
+    updateFormData('part2question8', {
+      selectedOptions: data.selectedOptions,
+    });
+
+    // Prepare payload
+    const payload = {
+      Question:
+        "It is the land area through which the transmission line will pass. Here, our objective is to identify the villages and areas where the project team might face opposition. According to you, in which category should this village be placed?",
+      Answer: data.selectedOptions.join('; '),
+      Kml_Name: name,
+      Researcher_Mobile: Number(researcherMobile),
+      Form_No: formNumber,
+      Dist: selectedDistrict,
+      State: selectedState,
+      Village_Name: selectedVillage,
+      Shape_Id: shapeId,
+    };
+
+    try {
+      let response;
+      if (formData.part2question8.id) {
+        // UPDATE existing record
+        const updatePayload = {
+          id: formData.part2question8.id,
+          ...payload,
+        };
+
+        response = await axios.post(
+          `https://adfirst.in/api/Part2Question8/update/${formData.part2question8.id}`,
+          updatePayload
+        );
+        console.log('Updated entry:', response.data);
+
+        // Update the context with the latest ID and data
+        updateFormData('part2question8', {
+          id: response.data.data.id,
+          selectedOptions: data.selectedOptions,
+        });
+        Alert.alert('Data Updated!');
+      } else {
+        // CREATE new record
+        response = await axios.post(
+          'https://adfirst.in/api/Part2Question8',
+          payload
+        );
+        console.log('Created new entry:', response.data);
+
+        // Save the generated ID
+        updateFormData('part2question8', {
+          id: response.data.id,
+          selectedOptions: data.selectedOptions,
+        });
+        // Alert.alert('Data Submitted!');
+      }
+
+      navigation.navigate('PartTwoQues9', {
+        name,
+        researcherMobile,
+        formNumber,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId
+      });
     } catch (error) {
       console.error('Error submitting data:', error);
       Alert.alert('An error occurred while submitting.');
-    }finally {
-            setLoading(false);
-        }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -126,9 +189,9 @@ const PartTwoQues8 = ({ navigation, route }) => {
         <TouchableOpacity
           style={styles.nextButton}
           onPress={handleSubmit(onSubmit)}
-          disabled={ loading}
+          disabled={loading}
         >
-          <Text style={styles.nextButtonText}>{loading ? 'Submitting...' : 'Next Page'}</Text>
+          <Text style={styles.nextButtonText}>{loading ? 'Wait...' : 'Next Page'}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

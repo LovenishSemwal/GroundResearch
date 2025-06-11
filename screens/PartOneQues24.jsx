@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,28 @@ import {
   Alert
 } from 'react-native';
 import axios from 'axios';
+import { useFormData } from './FormDataContext';  // import the context
 
 const PartOneQues24 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
-  const [acquisitionDetails, setAcquisitionDetails] = useState('');
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { formData, updateFormData } = useFormData();
+
+  const [acquisitionDetails, setAcquisitionDetails] = useState(() => formData.part1question24.answer || '');
   const [loading, setLoading] = useState(false);
 
+  // Sync local changes with context
+  useEffect(() => {
+    updateFormData('part1question24', { answer: acquisitionDetails });
+  }, [acquisitionDetails]);
+
   const handleSubmit = async () => {
+    if (!acquisitionDetails) {
+      Alert.alert('Validation', 'Please fill in the answer');
+      return;
+    }
+
     setLoading(true);
+
     try {
       const payload = {
         Question: 'What problem could arise in this area?',
@@ -26,34 +40,72 @@ const PartOneQues24 = ({ navigation, route }) => {
         Researcher_Mobile: Number(researcherMobile),
         Kml_Name: name,
         Form_No: formNumber,
+        Dist: selectedDistrict,
+        State: selectedState,
+        Village_Name: selectedVillage,
+        Shape_Id: shapeId,
       };
 
-      const response = await axios.post('https://brandscore.in/api/Part1Question24', payload);
+      // Check if record exists (id available in context)
+      if (formData.part1question24.id) {
+        // UPDATE existing record
+        const updateResponse = await axios.post(
+          `https://adfirst.in/api/Part1Question24/update/${formData.part1question24.id}`,
+          { ...payload, Id: formData.part1question24.id }
+        );
 
-      if (response.status === 200) {
-        Alert.alert(
-          'Success',
-          'KM Wise Questionnaire is complete',
-          [
+        if (updateResponse.data.success) {
+          Alert.alert('Success', 'Record updated successfully!', [
             {
               text: 'OK',
               onPress: () => navigation.navigate('PartTwoQues1', {
                 name,
                 researcherMobile,
-                formNumber
+                formNumber,
+                selectedState,
+                selectedDistrict,
+                selectedVillage,
+                shapeId
               }),
             },
-          ]
+          ]);
+        } else {
+          Alert.alert('Error', 'Failed to update record.');
+        }
+      } else {
+        // CREATE new record
+        const createResponse = await axios.post(
+          'https://adfirst.in/api/Part1Question24',
+          payload
         );
+
+        if (createResponse.status === 200 && createResponse.data.id) {
+          updateFormData('part1question24', { id: createResponse.data.id });
+          Alert.alert('Success', 'KM Wise Questionnaire is complete', [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('PartTwoQues1', {
+                name,
+                researcherMobile,
+                formNumber,
+                selectedState,
+                selectedDistrict,
+                selectedVillage,
+                shapeId
+              }),
+            },
+          ]);
+        } else {
+          Alert.alert('Error', 'Failed to save record.');
+        }
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Something went wrong while submitting data');
+      Alert.alert('Error', 'Something went wrong while submitting data.');
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <KeyboardAvoidingView
@@ -61,15 +113,9 @@ const PartOneQues24 = ({ navigation, route }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.question}>
-          Question 24
-        </Text>
-        <Text style={styles.question}>
-          What problem could arise in this area?
-        </Text>
-        <Text style={styles.question}>
-          इस क्षेत्र में क्या समस्या आ सकती है
-        </Text>
+        <Text style={styles.question}>Question 24</Text>
+        <Text style={styles.question}>What problem could arise in this area?</Text>
+        <Text style={styles.question}>इस क्षेत्र में क्या समस्या आ सकती है</Text>
 
         <TextInput
           placeholder="अपना उत्तर यहाँ लिखें"
@@ -85,7 +131,7 @@ const PartOneQues24 = ({ navigation, route }) => {
           onPress={handleSubmit}
           disabled={!acquisitionDetails || loading}
         >
-          <Text style={styles.nextButtonText}>{loading ? 'Submitting...' : 'Submit'}</Text>
+          <Text style={styles.nextButtonText}>{loading ? 'Wait...' : 'Submit'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

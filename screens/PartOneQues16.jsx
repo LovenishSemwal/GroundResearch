@@ -1,53 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Linking,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Alert
+  View, Text, TextInput, TouchableOpacity, Linking,
+  ScrollView, KeyboardAvoidingView, Platform, StyleSheet, Alert
 } from 'react-native';
+import { useFormData } from './FormDataContext';
 
 const PartOneQues16 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { formData, updateFormData } = useFormData();
+
+  // Load from context (with fallback)
+  const [work, setWork] = useState(formData.part1question16?.answer || '');
   const [loading, setLoading] = useState(false);
-  const [work, setWork] = useState('');
+
+  // Save to context on work change
+  useEffect(() => {
+    updateFormData('part1question16', { answer: work });
+  }, [work]);
 
   const handleSearchPress = () => {
-    // Replace this URL with your actual search URL
     const url = 'https://epanjiyan.rajasthan.gov.in/dlcdistrict.aspx';
     Linking.openURL(url).catch(err => console.error('Failed to open URL:', err));
   };
 
   const handleNext = async () => {
-    setLoading(true); // Start loading
+    if (!work) {
+      Alert.alert('Please enter the circle rate.');
+      return;
+    }
+
+    setLoading(true);
+
     const payload = {
       question: 'What is the circle rate of this area?',
       answer: work,
       researcher_Mobile: Number(researcherMobile),
       kml_Name: name,
       Form_No: formNumber,
+      Dist:selectedDistrict,
+      State:selectedState,
+      Village_Name:selectedVillage,
+      Shape_Id:shapeId
+     
     };
 
     try {
-      const response = await axios.post('https://brandscore.in/api/Part1Question16', payload);
-      console.log('Saved successfully:', response.data);
-      Alert.alert('Data submitted successfully!');
+      if (formData.part1question16?.id) {
+        // If there's an ID, update existing record
+        payload.id = formData.part1question16.id;
+        const response = await axios.post(
+          `https://adfirst.in/api/Part1Question16/update/${formData.part1question16.id}`,
+          payload
+        );
+        console.log('Updated successfully:', response.data);
+        Alert.alert('Data updated successfully!');
+      } else {
+        // No ID, so create new record
+        const response = await axios.post(
+          'https://adfirst.in/api/Part1Question16',
+          payload
+        );
+        console.log('Saved successfully:', response.data);
+        // Save returned ID in context
+        updateFormData('part1question16', { id: response.data.id });
+        // Alert.alert('Data submitted successfully!');
+      }
+
+      // Navigate to next
       navigation.navigate('PartOneQues17', {
         name,
         researcherMobile,
-        formNumber
+        formNumber,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId
+       
       });
     } catch (error) {
-      console.error('Error saving data:', error);
+      console.error('Error:', error.response?.data || error.message);
       Alert.alert('Error submitting data. Check console for details.');
     } finally {
-      setLoading(false); // Stop loading
+      setLoading(false);
     }
   };
 
@@ -60,23 +95,14 @@ const PartOneQues16 = ({ navigation, route }) => {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.question}>
-          Question 16
-        </Text>
+        <Text style={styles.question}>Question 16</Text>
         <Text style={styles.question}>
           What is the circle rate of this area?{' '}
-          <Text style={styles.linkText} onPress={handleSearchPress}>
-            (Search)
-          </Text>
-          ?
+          <Text style={styles.linkText} onPress={handleSearchPress}>(Search)</Text>?
         </Text>
-
         <Text style={styles.questionHindi}>
           इस क्षेत्र का सर्कल रेट क्या है?{' '}
-          <Text style={styles.linkText} onPress={handleSearchPress}>
-            (खोजें)
-          </Text>
-          ?
+          <Text style={styles.linkText} onPress={handleSearchPress}>(खोजें)</Text>?
         </Text>
 
         <TextInput
@@ -137,6 +163,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     marginBottom: 24,
+    color: '#000'
   },
   nextButton: {
     backgroundColor: '#28a745',

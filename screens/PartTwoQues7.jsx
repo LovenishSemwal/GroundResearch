@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -6,251 +6,201 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
-    Alert
+    Alert,
+    KeyboardAvoidingView,
+    Platform
 } from 'react-native';
 import axios from 'axios';
-import { useForm, Controller, useFieldArray } from 'react-hook-form';
+import { useFormData } from './FormDataContext'; // use the context
 
 const PartTwoQues7 = ({ navigation, route }) => {
-    const { name, researcherMobile, formNumber } = route.params || {};
+    const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+    const { formData: contextData, updateFormData } = useFormData();
+
+    // Initialize problemMakers with context data if available or default value
+    const [problemMakers, setProblemMakers] = useState([{ id: null, name: '', background: '', mobile: '', reason: '' }]);
     const [loading, setLoading] = useState(false);
-    const { control, handleSubmit, watch, formState } = useForm({
-        defaultValues: {
-            mainAnswer: null,
-            details: [],
-        },
-        mode: 'onChange',
-    });
 
-    const { append, fields } = useFieldArray({
-        control,
-        name: 'details',
-    });
+    useEffect(() => {
+        if (Array.isArray(contextData.PartTwoQues7)) {
+            setProblemMakers(contextData.PartTwoQues7);
+        }
+    }, [contextData.PartTwoQues7]);
 
-    const mainAnswer = watch('mainAnswer');
-    const details = watch('details');
+    // Keep context updated whenever problemMakers changes
+    useEffect(() => {
+        updateFormData('PartTwoQues7', [...problemMakers]); // clone to avoid unintended mutations
+    }, [problemMakers]);
 
-    const isFormValid = () => {
-        if (mainAnswer !== 'yes') return mainAnswer === 'no';
-        return (
-            details.length > 0 &&
-            details.every(
-                item =>
-                    item.field1?.trim() &&
-                    item.field2?.trim() &&
-                    item.textarea?.trim() &&
-                    /^\d{10}$/.test(item.mobile || '')
-            )
-        );
+    const addMore = () => {
+        setProblemMakers([
+            ...problemMakers,
+            { id: null, name: '', background: '', mobile: '', reason: '' }
+        ]);
     };
 
-    const onSubmit = async (data) => {
+    const removeForm = (index) => {
+        if (problemMakers.length > 1) {
+            const updated = [...problemMakers];
+            updated.splice(index, 1);
+            setProblemMakers(updated);
+        } else {
+            Alert.alert("You must have at least one form filled out.");
+        }
+    };
+
+    const handleChange = (index, field, value) => {
+        const updated = [...problemMakers];
+        updated[index][field] = value;
+        setProblemMakers(updated);
+    };
+
+    const isNextEnabled = problemMakers.every(
+        (item) =>
+            item.name.trim() !== '' &&
+            item.background.trim() !== '' &&
+            item.mobile.trim() !== '' &&
+            item.reason.trim() !== ''
+    );
+
+    const handleNext = async () => {
+        if (!isNextEnabled) {
+            Alert.alert('Please fill in all fields for each entry.');
+            return;
+        }
 
         setLoading(true);
-        try {
-            if (data.mainAnswer === 'no') {
-                const payload = {
-                    Question: 'Who are the people that may create problems during land acquisition?',
-                    Answer: 'No',
-                    Name: "",
-                    Background: '',
-                    Reason: '',
-                    Kml_Name: name,
-                    Researcher_Mobile: Number(researcherMobile),
-                    Form_No: formNumber,
-                };
-                await axios.post('https://brandscore.in/api/Part2Question7', payload);
-            } else if (data.mainAnswer === 'yes') {
-                const promises = data.details.map(detail => {
-                    const payload = {
-                        Question: 'Who are the people that may create problems during land acquisition?',
-                        Answer: 'Yes',
-                        Name: detail.field1,
-                        Background: detail.field2,
-                        Reason: detail.textarea,
-                        Mobile_No: Number(detail.mobile),
-                        Kml_Name: name,
-                        Researcher_Mobile: Number(researcherMobile),
-                        Form_No: formNumber,
-                    };
-                    return axios.post('http://apirj.pollfirst.in/api/Part2Question7', payload);
-                });
 
-                await Promise.all(promises);
+        try {
+            const updated = [...problemMakers]; // Clone to safely assign new IDs
+
+            for (let index = 0; index < updated.length; index++) {
+                const entry = updated[index];
+
+                const payload = {
+                    ...(entry.id ? { Id: entry.id } : {}),
+                    question: 'Who can create problems in land acquisition?',
+                    answer: null,
+                    name: entry.name,
+                    background: entry.background,
+                    mobile_No: Number(entry.mobile),
+                    reason: entry.reason,
+                    kml_Name: name,
+                    researcher_Mobile: Number(researcherMobile),
+                    form_No: formNumber,
+                    state: selectedState,
+                    dist: selectedDistrict,
+                    village_Name: selectedVillage,
+                    shape_Id: shapeId
+                };
+
+                let response;
+                if (entry.id) {
+                    response = await axios.post(`https://adfirst.in/api/Part2Question7/update/${entry.id}`, payload);
+                } else {
+                    response = await axios.post('https://adfirst.in/api/Part2Question7', payload);
+                }
+
+                const returnedId = response.data?.id || response.data?.data?.id;
+                if (returnedId) {
+                    updated[index].id = returnedId;
+                }
             }
 
-            Alert.alert('Data Submitted!');
-            navigation.navigate('PartTwoQues8', { name, researcherMobile, formNumber });
+            setProblemMakers(updated);
+            updateFormData('PartTwoQues7', updated);
+            // Alert.alert('All entries saved successfully!');
+            navigation.navigate('PartTwoQues8', {
+                name,
+                researcherMobile,
+                formNumber,
+                selectedState,
+                selectedDistrict,
+                selectedVillage,
+                shapeId
+            });
         } catch (error) {
-            console.error('Error submitting data:', error);
-            Alert.alert('An error occurred while submitting.');
+            console.error('Error submitting entries:', error.response?.data || error.message);
+            Alert.alert('Error submitting entries. Check console for details.');
         } finally {
             setLoading(false);
         }
     };
 
-
     return (
-        <ScrollView style={styles.container}
-        contentContainerStyle={{ paddingBottom: 40 }} >
-            <Text style={styles.question}>Part2: Question 7</Text>
-            <Text style={styles.question}>Who are the people that may create problems during land acquisition?</Text>
-            <Text style={styles.question}>(कौन से लोग जमीन अधिग्रहण में समस्या खड़ी कर सकते हैं?)</Text>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+            <ScrollView
+                contentContainerStyle={styles.container}
+                keyboardShouldPersistTaps="handled"
+            >
+                <Text style={styles.question}>Question</Text>
+                <Text style={styles.question}>Who can create problems in land acquisition?</Text>
+                <Text style={styles.question}>(कौन जमीन अधिग्रहण में समस्या खड़ी कर सकता है?)</Text>
 
-            {/* Yes/No Buttons */}
-            <Controller
-                control={control}
-                name="mainAnswer"
-                rules={{ required: true }}
-                render={({ field: { onChange, value } }) => (
-                    <View style={styles.toggleContainer}>
-                        {['yes', 'no'].map(option => (
+                {problemMakers.map((item, index) => (
+                    <View key={index} style={styles.formSet}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Name"
+                            placeholderTextColor="gray"
+                            value={item.name}
+                            onChangeText={(text) => handleChange(index, 'name', text)}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Background and work"
+                            placeholderTextColor="gray"
+                            value={item.background}
+                            onChangeText={(text) => handleChange(index, 'background', text)}
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Mobile"
+                            placeholderTextColor="gray"
+                            keyboardType="phone-pad"
+                            value={item.mobile}
+                            onChangeText={(text) => handleChange(index, 'mobile', text)}
+                        />
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            placeholder="Reason"
+                            placeholderTextColor="gray"
+                            multiline
+                            numberOfLines={4}
+                            value={item.reason}
+                            onChangeText={(text) => handleChange(index, 'reason', text)}
+                        />
+
+                        {problemMakers.length > 1 && (
                             <TouchableOpacity
-                                key={option}
-                                style={[
-                                    styles.optionButton,
-                                    value === option && styles.optionButtonSelected,
-                                ]}
-                                onPress={() => {
-                                    onChange(option);
-
-                                    if (option === 'yes' && details.length === 0) {
-                                        append({
-                                            field1: '',
-                                            field2: '',
-                                            textarea: '',
-                                            mobile: '',
-                                        });
-                                    } else if (option === 'no') {
-                                        while (details.length > 0) {
-                                            details.pop();
-                                        }
-                                    }
-                                }}
-
+                                style={styles.removeButton}
+                                onPress={() => removeForm(index)}
                             >
-                                <Text
-                                    style={[
-                                        styles.optionText,
-                                        value === option && styles.optionTextSelected,
-                                    ]}
-                                >
-                                    {option === 'yes' ? 'Yes (हाँ)' : 'No one (कोई नहीं)'}
-                                </Text>
+                                <Text style={styles.removeButtonText}>Remove Form</Text>
                             </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-            />
-
-            {/* Conditional Form Fields */}
-            {mainAnswer === 'yes' &&
-                fields.map((field, index) => (
-                    <View key={field.id} style={styles.formGroup}>
-                        <Text style={styles.subHeading}>Form {index + 1}</Text>
-
-                        {/* Field 1 */}
-                        <Controller
-                            control={control}
-                            name={`details.${index}.field1`}
-                            rules={{ required: true }}
-                            render={({ field: { onChange, value } }) => (
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Name"
-                                    placeholderTextColor="gray"
-                                    value={value}
-                                    onChangeText={onChange}
-                                />
-                            )}
-                        />
-
-                        {/* Field 2 */}
-                        <Controller
-                            control={control}
-                            name={`details.${index}.field2`}
-                            rules={{ required: true }}
-                            render={({ field: { onChange, value } }) => (
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Background"
-                                    placeholderTextColor="gray"
-                                    value={value}
-                                    onChangeText={onChange}
-                                />
-                            )}
-                        />
-
-                        {/* TextArea */}
-                        <Controller
-                            control={control}
-                            name={`details.${index}.textarea`}
-                            rules={{ required: true }}
-                            render={({ field: { onChange, value } }) => (
-                                <TextInput
-                                    style={styles.textarea}
-                                    placeholder="Reason"
-                                    placeholderTextColor="gray"
-                                    value={value}
-                                    multiline
-                                    numberOfLines={4}
-                                    onChangeText={onChange}
-                                />
-                            )}
-                        />
-
-                        {/* Mobile Number */}
-                        <Controller
-                            control={control}
-                            name={`details.${index}.mobile`}
-                            rules={{
-                                required: true,
-                                pattern: /^\d{10}$/,
-                            }}
-                            render={({ field: { onChange, value } }) => (
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Mobile Number"
-                                    placeholderTextColor="gray"
-                                    keyboardType="numeric"
-                                    maxLength={10}
-                                    value={value}
-                                    onChangeText={onChange}
-                                />
-                            )}
-                        />
+                        )}
                     </View>
                 ))}
 
-            {/* Add More Button */}
-            {mainAnswer === 'yes' && (
                 <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() =>
-                        append({
-                            field1: '',
-                            field2: '',
-                            textarea: '',
-                            mobile: '',
-                        })
-                    }
+                    style={styles.addMoreButton}
+                    onPress={addMore}
                 >
-                    <Text style={styles.addButtonText}>+ Add More</Text>
+                    <Text style={styles.addMoreText}>Add More</Text>
                 </TouchableOpacity>
-            )}
 
-            {/* Next Button */}
-            <TouchableOpacity
-                style={[
-                    styles.nextButton,
-                    !isFormValid() && styles.nextButtonDisabled,
-                ]}
-                disabled={!isFormValid() || loading}
-                onPress={handleSubmit(onSubmit)}
-            >
-                <Text style={styles.nextButtonText}>{loading ? 'Submitting...' : 'Next Page'}</Text>
-            </TouchableOpacity>
-        </ScrollView>
+                <TouchableOpacity
+                    style={[styles.nextButton, { opacity: isNextEnabled && !loading ? 1 : 0.5 }]}
+                    onPress={handleNext}
+                    disabled={!isNextEnabled || loading}
+                >
+                    <Text style={styles.nextButtonText}>{loading ? 'Wait...' : 'Submit & Next'}</Text>
+                </TouchableOpacity>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 
@@ -258,91 +208,66 @@ export default PartTwoQues7;
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        padding: 20,
+        flexGrow: 1,
+        padding: 24,
         backgroundColor: '#fff',
     },
     question: {
         fontSize: 20,
-        fontWeight: 'bold',
-        textAlign: 'center',
+        fontWeight: '600',
         marginBottom: 16,
+        textAlign: 'center',
     },
-    toggleContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginBottom: 20,
-    },
-    optionButton: {
-        padding: 14,
-        borderRadius: 8,
+    formSet: {
         borderWidth: 1,
         borderColor: '#aaa',
-        marginHorizontal: 10,
-        backgroundColor: '#f5f5f5',
-    },
-    optionButtonSelected: {
-        backgroundColor: '#0066cc',
-        borderColor: '#0066cc',
-    },
-    optionText: {
-        color: '#333',
-        fontSize: 16,
-    },
-    optionTextSelected: {
-        color: '#fff',
-        fontWeight: 'bold',
-    },
-    formGroup: {
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        padding: 12,
         borderRadius: 8,
-        backgroundColor: '#fafafa',
-    },
-    subHeading: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 8,
+        padding: 12,
+        marginBottom: 12,
     },
     input: {
-        borderWidth: 1,
+        borderBottomWidth: 1,
         borderColor: '#aaa',
-        borderRadius: 6,
-        padding: 10,
         marginBottom: 12,
-        backgroundColor: '#fff',
-    },
-    textarea: {
-        borderWidth: 1,
-        borderColor: '#aaa',
-        borderRadius: 6,
-        padding: 10,
-        height: 100,
-        textAlignVertical: 'top',
-        backgroundColor: '#fff',
-        marginBottom: 12,
-    },
-    addButton: {
-        alignSelf: 'center',
-        marginBottom: 20,
-    },
-    addButtonText: {
+        paddingVertical: 6,
+        paddingHorizontal: 8,
         fontSize: 16,
-        color: '#007bff',
+    },
+    textArea: {
+        minHeight: 80,
+        textAlignVertical: 'top',
+    },
+    addMoreButton: {
+        backgroundColor: '#007bff',
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 12,
+    },
+    addMoreText: {
+        color: '#fff',
+        fontSize: 16,
     },
     nextButton: {
         backgroundColor: '#28a745',
-        padding: 14,
+        paddingVertical: 14,
         borderRadius: 8,
         alignItems: 'center',
-    },
-    nextButtonDisabled: {
-        backgroundColor: '#ccc',
+        marginTop: 24,
     },
     nextButtonText: {
         color: '#fff',
         fontSize: 18,
+    },
+    removeButton: {
+        backgroundColor: '#dc3545',
+        paddingVertical: 8,
+        borderRadius: 6,
+        alignItems: 'center',
+        marginTop: 8,
+    },
+    removeButtonText: {
+        color: '#fff',
+        fontSize: 14,
     },
 });

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
+import { useFormData } from './FormDataContext';
 
 const options = [
   { id: 'a', label: 'None (कोई नही)' },
@@ -11,44 +12,76 @@ const options = [
 ];
 
 const PartOneQues7 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId   } = route.params || {};
+  const { formData, updateFormData } = useFormData();
 
-  const { control, handleSubmit, watch } = useForm({
-    defaultValues: { answer: null }
+  const { control, handleSubmit, setValue, watch } = useForm({
+    defaultValues: { answer: '' },
   });
 
   const selectedOption = watch('answer');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false); // <-- new state
+  useEffect(() => {
+    if (formData.part1question7?.answer) {
+      setValue('answer', formData.part1question7.answer);
+    }
+  }, [formData.part1question7, setValue]);
 
   const onSubmit = async (data) => {
-    setIsSubmitting(true);  // <-- disable button right away
+    setIsSubmitting(true);
+
+    const pageKey = 'part1question7';
     const postData = {
       Question: 'How many crops are grown in a year?',
       Answer: data.answer,
       Kml_Name: name,
       Researcher_Mobile: Number(researcherMobile),
-      Form_No: formNumber
+      Form_No: formNumber,
+      State:selectedState,
+      Dist:selectedDistrict,
+      Village_Name:selectedVillage,
+      Shape_Id:shapeId
     };
 
-    try {
-      const response = await axios.post(
-        'https://brandscore.in/api/Part1Question7',
-        postData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+    // Check if record exists
+    const existingId = formData[pageKey]?.id;
 
-      if (response.status === 200) {
-        console.log('Data posted:', response.data);
-        Alert.alert('Done', 'Data submitted successfully');
+    let response;
+    try {
+      if (existingId) {
+        // Update existing record
+        response = await axios.post(
+          `https://adfirst.in/api/Part1Question7/update/${existingId}`,
+          { ...postData, Id: existingId },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+      } else {
+        // Create new record
+        response = await axios.post(
+          'https://adfirst.in/api/Part1Question7',
+          postData,
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (response.data?.id || response.data?.data?.id) {
+        // Save id and answer to context
+        updateFormData(pageKey, {
+          answer: data.answer,
+          id: response.data.id || response.data.data.id,
+        });
+
+        console.log('Data saved:', response.data);
+        // Alert.alert('Done', 'Data submitted successfully');
         navigation.navigate('PartOneQues8', {
           name,
           researcherMobile,
-          formNumber
+          formNumber,
+          selectedState,
+          selectedDistrict,
+          selectedVillage,
+          shapeId
         });
       } else {
         Alert.alert('Error', 'Submission failed. Try again.');
@@ -58,7 +91,7 @@ const PartOneQues7 = ({ navigation, route }) => {
       console.error('Error submitting:', errorMessage);
       Alert.alert('Submission Error', errorMessage);
     } finally {
-      setIsSubmitting(false);  // <-- re-enable button after response/error
+      setIsSubmitting(false);
     }
   };
 
@@ -81,7 +114,10 @@ const PartOneQues7 = ({ navigation, route }) => {
                   styles.optionButton,
                   value === option.id && styles.optionButtonSelected,
                 ]}
-                onPress={() => onChange(option.id)}
+                onPress={() => {
+                  onChange(option.id);
+                  updateFormData('part1question7', { answer: option.id }); // Live update to context
+                }}
               >
                 <Text
                   style={[
@@ -103,10 +139,10 @@ const PartOneQues7 = ({ navigation, route }) => {
           (!selectedOption || isSubmitting) && styles.nextButtonDisabled,
         ]}
         onPress={handleSubmit(onSubmit)}
-        disabled={!selectedOption || isSubmitting} // disable while submitting
+        disabled={!selectedOption || isSubmitting}
       >
         <Text style={styles.nextButtonText}>
-          {isSubmitting ? "Wait..." : "Next Page"}  {/* show "Wait..." */}
+          {isSubmitting ? 'Wait...' : 'Next Page'}
         </Text>
       </TouchableOpacity>
     </View>

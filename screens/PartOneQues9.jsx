@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,84 +7,150 @@ import {
   StyleSheet,
   Image,
   ScrollView,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
 import axios from 'axios';
 import { useForm, Controller } from 'react-hook-form';
 import { launchCamera } from 'react-native-image-picker';
+import { useFormData } from './FormDataContext';
 
 const DynamicFormWithPhotos = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [count, setCount] = useState(0);
   const [photos, setPhotos] = useState([]);
-  const { control, handleSubmit, setValue, watch } = useForm();
+  const { control, handleSubmit, setValue } = useForm();
+  const { formData, updateFormData } = useFormData();
+  const questionKey = 'part1question9';
 
-  const handleCountChange = num => {
+  // On load: restore data
+  useEffect(() => {
+    const savedData = formData[questionKey];
+    if (savedData) {
+      const savedNames = savedData.names || {};
+      const savedPhotos = savedData.photos || [];
+      const savedCount = savedPhotos.length || Object.keys(savedNames).length || 0;
+
+      setCount(savedCount);
+      setPhotos(savedPhotos);
+
+      for (let i = 0; i < savedCount; i++) {
+        setValue(`input_${i}`, savedNames[`input_${i}`] || '');
+      }
+    }
+  }, [formData, setValue]);
+
+  const handleCountChange = (num) => {
     setCount(num);
-    // Reset photos and form fields
     setPhotos(Array(num).fill(null));
     for (let i = 0; i < num; i++) {
       setValue(`input_${i}`, '');
     }
+
+    // Clear the context if count is 0
+    if (num === 0) {
+      updateFormData(questionKey, { names: {}, photos: [], id: formData[questionKey]?.id || null });
+    }
   };
 
-  const handlePhoto = index => {
-    const options = {
-      mediaType: 'photo',
-      saveToPhotos: true,
-      cameraType: 'back',
-      quality: 1,
-    };
-
-    launchCamera(options, response => {
+  const handlePhoto = (index) => {
+    const options = { mediaType: 'photo', saveToPhotos: true, cameraType: 'back', quality: 1 };
+    launchCamera(options, (response) => {
       if (response.didCancel) {
         console.log('User cancelled camera');
       } else if (response.errorCode) {
         console.log('Camera error:', response.errorMessage);
       } else {
-        const uri = response.assets && response.assets[0].uri;
+        let uri = response.assets && response.assets[0].uri;
+        if (Platform.OS === 'android' && !uri.startsWith('file://')) {
+          uri = 'file://' + uri;
+        }
+
         const updatedPhotos = [...photos];
         updatedPhotos[index] = uri;
         setPhotos(updatedPhotos);
+
+        // Update context
+        const currentData = formData[questionKey] || { names: {}, photos: [], id: null };
+        const updatedPhotosInContext = [...currentData.photos];
+        updatedPhotosInContext[index] = uri;
+        updateFormData(questionKey, { ...currentData, photos: updatedPhotosInContext });
       }
     });
   };
 
-  const onSubmit = async data => {
+  const onSubmit = async (data) => {
     setIsSubmitting(true);
-    const entries = Array(count).fill(0).map((_, i) => ({
-      label: data[`input_${i}`],
-      image: photos[i],
-    }));
-
     try {
-      for (let i = 0; i < entries.length; i++) {
-        const payload = {
-          Id: Date.now() + i, // Or generate with UUID if needed
-          Form_No: formNumber,
-          Question: "What types of trees are there – name and photo",
-          Name: entries[i].label,
-          Photo: entries[i].image,
-          Researcher_Mobile: Number(researcherMobile),
-          Kml_Name: name,
-        };
+      const formDataToSend = new FormData();
+      formDataToSend.append('Form_No', formNumber);
+      formDataToSend.append('Question', 'What types of trees are there – name and photo');
+      formDataToSend.append('Researcher_Mobile', researcherMobile.toString());
+      formDataToSend.append('Kml_Name', name);
+      formDataToSend.append('State', selectedState);
+      formDataToSend.append('District', selectedDistrict);
+      formDataToSend.append('VillageName', selectedVillage);
+      formDataToSend.append('Shapeid', shapeId);
 
-        await axios.post('https://brandscore.in/api/Part1Question9', payload);
+      const names = Array(count)
+        .fill()
+        .map((_, i) => data[`input_${i}`] || '')
+        .join(', ');
+      formDataToSend.append('Name', names);
+
+      for (let i = 0; i < count; i++) {
+        if (photos[i]) {
+          let uri = photos[i];
+          if (Platform.OS === 'android' && !uri.startsWith('file://')) {
+            uri = 'file://' + uri;
+          }
+          formDataToSend.append('PhotoFiles', {
+            uri,
+            name: `photo_${i}.jpg`,
+            type: 'image/jpeg',
+          });
+        }
       }
 
-      Alert.alert('Data submitted successfully!');
+      const existingId = formData[questionKey]?.id;
+      let response;
+      if (existingId) {
+        response = await axios.post(
+          `https://adfirst.in/api/Part1Question9/${existingId}`,
+          formDataToSend,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+      } else {
+        response = await axios.post(
+          'https://adfirst.in/api/Part1Question9',
+          formDataToSend,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+      }
+
+      console.log('Response:', response.data);
+      updateFormData(questionKey, {
+        id: response.data.id || existingId,
+        names: Object.fromEntries(Array(count).fill().map((_, i) => [`input_${i}`, data[`input_${i}`] || ''])),
+        photos: photos.filter((p) => p !== null),
+      });
+
+      // Alert.alert('Data submitted successfully!');
       navigation.navigate('PartOneQues10', {
         name,
         researcherMobile,
-        formNumber
+        formNumber,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId
       });
     } catch (error) {
-      console.error('Error posting data:', error);
-      Alert.alert('Error submitting data. Check console for details.');
+      console.error('Error posting data:', error.response?.data || error.message || error);
+      Alert.alert('Error submitting data. See console for details.');
     } finally {
-      setIsSubmitting(false);  // Enable button back after submission finished
+      setIsSubmitting(false);
     }
   };
 
@@ -99,22 +165,26 @@ const DynamicFormWithPhotos = ({ navigation, route }) => {
           style={styles.countInput}
           placeholder="Enter a number"
           keyboardType="numeric"
+          value={count.toString()}
           onChangeText={(text) => {
-            const num = parseInt(text, 10);
-            if (!isNaN(num) && num >= 0) {
-              handleCountChange(num);
+            if (text === '') {
+              setCount('');
+              setPhotos([]);
+            } else {
+              const num = parseInt(text, 10);
+              if (!isNaN(num) && num >= 0) {
+                handleCountChange(num);
+              }
             }
           }}
         />
       </View>
+
       <Text style={styles.title}>What types of trees are there – name and photo</Text>
       <Text style={styles.title}>(किस तरह के पेड़ हैं - नाम तथा फोटो)</Text>
 
-      {/* Dynamic Form Fields */}
       {Array.from({ length: count }).map((_, index) => (
-
         <View key={index} style={styles.inputRow}>
-
           <Controller
             control={control}
             name={`input_${index}`}
@@ -124,46 +194,36 @@ const DynamicFormWithPhotos = ({ navigation, route }) => {
                 style={styles.input}
                 placeholder={`Label ${index + 1}`}
                 value={value}
-                onChangeText={onChange}
+                onChangeText={(text) => {
+                  onChange(text);
+                  const currentData = formData[questionKey] || { names: {}, photos: [], id: null };
+                  const updatedNames = { ...currentData.names, [`input_${index}`]: text };
+                  updateFormData(questionKey, { ...currentData, names: updatedNames });
+                }}
               />
             )}
           />
-
-          {/*For Now No Need to Select Photo  */}
-          {/* <Controller
-            control={control}
-            name={`input_${index}`}
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                style={styles.input}
-                placeholder={`Label ${index + 1}`}
-                value={value}
-                onChangeText={onChange}
-              />
-            )}
-          /> */}
-
           <TouchableOpacity style={styles.photoButton} onPress={() => handlePhoto(index)}>
             <Text style={styles.photoText}>📷</Text>
           </TouchableOpacity>
-
           {photos[index] && (
-            <Image
-              source={{ uri: photos[index] }}
-              style={styles.imagePreview}
-            />
+            <Image source={{ uri: photos[index] }} style={styles.imagePreview} />
           )}
         </View>
       ))}
 
-      {/* Submit */}
-      {count > 0 && (
+      {(count !== null && count !== '' && !isNaN(count)) && (
         <TouchableOpacity
-          style={[
-            styles.submitButton,
-            { opacity: isSubmitting ? 0.6 : 1 }
-          ]}
-          disabled={isSubmitting}
+          style={[styles.submitButton, { opacity: isSubmitting ? 0.6 : 1 }]}
+          disabled={
+            isSubmitting ||
+            (count !== 0 &&
+              Array.from({ length: count }).some((_, i) => {
+                const fieldValue = control._formValues[`input_${i}`];
+                return !fieldValue || fieldValue.trim() === '';
+              })
+            )
+          }
           onPress={handleSubmit(onSubmit)}
         >
           <Text style={styles.submitButtonText}>{isSubmitting ? 'Wait...' : 'Next Page'}</Text>
@@ -186,23 +246,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  countSelector: {
+  countInputRow: {
+    marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 24,
   },
-  countButton: {
-    padding: 12,
-    backgroundColor: '#eee',
+  countInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
     borderRadius: 8,
-    marginHorizontal: 6,
-  },
-  countButtonSelected: {
-    backgroundColor: '#007BFF',
-  },
-  countText: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     fontSize: 16,
-    color: '#000',
+    width: 150,
+    textAlign: 'center',
+    color: 'black'
   },
   inputRow: {
     flexDirection: 'row',
@@ -247,21 +305,4 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
   },
-  countInputRow: {
-    marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  countInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
-    width: 150,
-    textAlign: 'center',
-    color: "black"
-  },
-
 });

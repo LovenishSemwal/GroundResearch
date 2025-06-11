@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { FormDataProvider } from './screens/FormDataContext';
 import LoginScreen from './screens/LoginScreen';
 import KmlForm from './screens/KmlForm';
 import ButtonsScreen from './screens/ButtonsScreen';
@@ -45,48 +46,82 @@ const Stack = createNativeStackNavigator();
 
 const App = () => {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }}/>
-        <Stack.Screen name="KmlForm" component={KmlForm} options={{ headerShown: false }}/>
-        <Stack.Screen name="Select" component={ButtonsScreen} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues1" component={PartOneQues1} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues2" component={PartOneQues2} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues3" component={PartOneQues3} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues4" component={PartOneQues4} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues5" component={PartOneQues5} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues6" component={PartOneQues6} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues7" component={PartOneQues7} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues8" component={PartOneQues8} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues9" component={PartOneQues9} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues10" component={PartOneQues10} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues11" component={PartOneQues11} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues12" component={PartOneQues12} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues13" component={PartOneQues13} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues14" component={PartOneQues14} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues15" component={PartOneQues15} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues16" component={PartOneQues16} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues17" component={PartOneQues17} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues18" component={PartOneQues18} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues19" component={PartOneQues19} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues20" component={PartOneQues20} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues21" component={PartOneQues21} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues22" component={PartOneQues22} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues23" component={PartOneQues23} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartOneQues24" component={PartOneQues24} options={{ headerShown: false }}/>
+    <FormDataProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="Login">
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="KmlForm" component={KmlForm} options={{ headerShown: true }} />
+          <Stack.Screen name="Select" component={ButtonsScreen} options={{headerShown: false }} />
+          <Stack.Screen name="PartOneQues1" component={PartOneQues1} options={{ title:"Previous"}} />
+
+          <Stack.Screen name="PartOneQues2" component={PartOneQues2} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues3" component={PartOneQues3} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues4" component={PartOneQues4} options={{ title:"Previous"}} />
+
+          <Stack.Screen name="PartOneQues5" component={PartOneQues5} options={{ title:"Previous"}} />
+
+          <Stack.Screen name="PartOneQues6" component={PartOneQues6} options={{ title:"Previous"}} />
+
+          <Stack.Screen name="PartOneQues7" component={PartOneQues7} options={{ title:"Previous"}} />
+
+          <Stack.Screen name="PartOneQues8" component={PartOneQues8} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues9" component={PartOneQues9} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues10" component={PartOneQues10} options={{ title:"Previous"}} />
+
+          <Stack.Screen name="PartOneQues11" component={PartOneQues11} options={{ title:"Previous"}} />
+
+          <Stack.Screen name="PartOneQues12" component={PartOneQues12} options={{ title:"Previous"}} />
+
+          <Stack.Screen name="PartOneQues13" component={PartOneQues13} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues14" component={PartOneQues14} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues15" component={PartOneQues15} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues16" component={PartOneQues16} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues17" component={PartOneQues17} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues18" component={PartOneQues18} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues19" component={PartOneQues19} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues20" component={PartOneQues20} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues21" component={PartOneQues21} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues22" component={PartOneQues22} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues23" component={PartOneQues23} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartOneQues24" component={PartOneQues24} options={{ title:"Previous" }} />
 
 
-        <Stack.Screen name="PartTwoQues1" component={PartTwoQues1} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartTwoQues2" component={PartTwoQues2} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartTwoQues3" component={PartTwoQues3} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartTwoQues4" component={PartTwoQues4} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartTwoQues5" component={PartTwoQues5} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartTwoQues6" component={PartTwoQues6} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartTwoQues7" component={PartTwoQues7} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartTwoQues8" component={PartTwoQues8} options={{ headerShown: false }}/>
-        <Stack.Screen name="PartTwoQues9" component={PartTwoQues9} options={{ headerShown: false }}/>
-      </Stack.Navigator>
-    </NavigationContainer>
+
+          <Stack.Screen name="PartTwoQues1" component={PartTwoQues1} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartTwoQues2" component={PartTwoQues2} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartTwoQues3" component={PartTwoQues3} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartTwoQues4" component={PartTwoQues4} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartTwoQues5" component={PartTwoQues5} options={{title:"Previous" }} />
+
+          <Stack.Screen name="PartTwoQues6" component={PartTwoQues6} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartTwoQues7" component={PartTwoQues7} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartTwoQues8" component={PartTwoQues8} options={{ title:"Previous" }} />
+
+          <Stack.Screen name="PartTwoQues9" component={PartTwoQues9} options={{ title:"Previous" }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </FormDataProvider>
   );
 };
 

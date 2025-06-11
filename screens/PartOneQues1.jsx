@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
-
+import { useFormData } from './FormDataContext';
 
 const options = [
   { id: 'a', label: 'Private (प्राईवेट)' },
@@ -12,43 +12,80 @@ const options = [
 ];
 
 const PartOneQues1 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {}; //  receive values
+  const { name, researcherMobile, formNumber, selectedState,selectedDistrict,selectedVillage,shapeId, } = route.params || {};
+  const { formData, updateFormData } = useFormData();
 
   const { control, handleSubmit, watch } = useForm({
-    defaultValues: { answer: null },
+    defaultValues: {
+      answer: null,
+    },
   });
 
   const selectedOption = watch('answer');
-  const [loading, setLoading] = useState(false); // <-- Add loading state
+  const [loading, setLoading] = useState(false);
 
   const onSubmit = async (data) => {
-    setLoading(true); // Start loading
+    setLoading(true);
     try {
+      const pageKey = 'part1question1';
       const postData = {
         Question: 'Whose land is it?',
         Answer: data.answer,
         KmlName: name,
+        State: selectedState,
         ResearcherMobile: Number(researcherMobile),
-        FormNo: String(formNumber)
+        Dist:selectedDistrict,
+        VillageName:selectedVillage,
+        ShapeId:shapeId,
+        FormNo: String(formNumber),
+        Id: formData[pageKey]?.id || 0, // include ID if updating
       };
 
-      const response = await axios.post(
-        'https://brandscore.in/api/Part1Question1',
-        postData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const existingId = formData[pageKey]?.id;
+
+      let response;
+      if (existingId) {
+        // Use POST for update 
+        response = await axios.post(
+          `https://adfirst.in/api/Part1Question1/update/${existingId}`,
+          postData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      } else {
+        // Create new record (POST)
+        response = await axios.post(
+          'https://adfirst.in/api/Part1Question1',
+          postData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      }
 
       if (response.data.success) {
-        console.log('Data posted:', response.data);
-        Alert.alert('Done', 'Data Submitted');
+        console.log('Data saved:', response.data.data);
+
+        // Update context with new answer and record ID
+        updateFormData(pageKey, {
+          answer: data.answer,
+          id: response.data.data.id,
+        });
+
+        // Alert.alert('Done', 'Data Submitted');
         navigation.navigate('PartOneQues2', {
           name,
           researcherMobile,
-          formNumber
+          formNumber,
+          selectedState,
+          selectedDistrict,
+          selectedVillage,
+          shapeId,
         });
       } else {
         Alert.alert('Error', response.data.message || 'Unknown error');
@@ -56,23 +93,18 @@ const PartOneQues1 = ({ navigation, route }) => {
     } catch (error) {
       console.error('Error posting data:', error.response?.data || error.message);
       Alert.alert('Error', 'Something went wrong while submitting.');
-    }
-    finally {
-      setLoading(false); // Stop loading no matter what
+    } finally {
+      setLoading(false);
     }
   };
 
-
   return (
     <View style={styles.container}>
-
-
       <Text style={styles.question}>Question 1</Text>
-      <Text style={styles.question}> Whose land is it?</Text>
+      <Text style={styles.question}>Whose land is it?</Text>
       <Text style={styles.question}>(जमीन किसकी है?)</Text>
 
-
-       <Controller
+      <Controller
         control={control}
         name="answer"
         rules={{ required: true }}
@@ -86,7 +118,7 @@ const PartOneQues1 = ({ navigation, route }) => {
                   value === option.id && styles.optionButtonSelected,
                 ]}
                 onPress={() => onChange(option.id)}
-                disabled={loading} // disable options while loading
+                disabled={loading}
               >
                 <Text
                   style={[
@@ -108,7 +140,7 @@ const PartOneQues1 = ({ navigation, route }) => {
           (!selectedOption || loading) && styles.nextButtonDisabled,
         ]}
         onPress={handleSubmit(onSubmit)}
-        disabled={!selectedOption || loading} // disable button if no selection or loading
+        disabled={!selectedOption || loading}
       >
         <Text style={styles.nextButtonText}>{loading ? 'Wait...' : 'Next Page'}</Text>
       </TouchableOpacity>
@@ -117,7 +149,6 @@ const PartOneQues1 = ({ navigation, route }) => {
 };
 
 export default PartOneQues1;
-
 
 const styles = StyleSheet.create({
   container: {
@@ -169,4 +200,4 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
   },
-}); 
+});

@@ -15,129 +15,205 @@ import {
 import Geolocation from 'react-native-geolocation-service';
 import { launchCamera } from 'react-native-image-picker';
 import axios from 'axios';
+import { useFormData } from './FormDataContext';
 
 const PartOneQues18 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasLocation, setHasLocation] = useState('');
-  const [locationName, setLocationName] = useState('');
-  const [lat, setLat] = useState('');
-  const [long, setLong] = useState('');
-  const [imageUri, setImageUri] = useState(null);
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { formData, updateFormData } = useFormData();
 
+  // Initialize local states with context data or defaults
+  const initialHasLocation = formData.part1question18?.hasLocation || '';
+  const initialLocationName = formData.part1question18?.locationName || '';
+  const initialLat = formData.part1question18?.lat || '';
+  const initialLong = formData.part1question18?.long || '';
+  const initialImageUri = formData.part1question18?.imageUri || null;
+  const [recordId, setRecordId] = useState(formData.part1question18?.id || null);
 
+  const [hasLocation, setHasLocation] = useState(initialHasLocation);
+  const [locationName, setLocationName] = useState(initialLocationName);
+  const [lat, setLat] = useState(initialLat);
+  const [long, setLong] = useState(initialLong);
+  const [imageUri, setImageUri] = useState(initialImageUri);
+  const [loading, setLoading] = useState(false);
 
-  // Get user location
+  // Request location and update lat/long
   const getLocation = async () => {
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-    );
-
-    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-      Geolocation.getCurrentPosition(
-        position => {
-          setLat(position.coords.latitude.toString());
-          setLong(position.coords.longitude.toString());
-        },
-        error => {
-          console.error('Geolocation error:', error.message);
-          Alert.alert('Location Error', error.message);
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
       );
-    } else {
-      Alert.alert('Permission Denied', 'Location permission is required.');
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        Geolocation.getCurrentPosition(
+          position => {
+            setLat(position.coords.latitude.toString());
+            setLong(position.coords.longitude.toString());
+          },
+          error => {
+            Alert.alert('Location Error', error.message);
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
+      } else {
+        Alert.alert('Permission Denied', 'Location permission is required.');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to get location permission.');
     }
   };
 
+  // Sync local state to context on any change
+  useEffect(() => {
+    setRecordId(formData.part1question18?.id || null);
+  }, [formData.part1question18?.id]);
+
+  // When hasLocation is 'Yes', fetch location automatically
   useEffect(() => {
     if (hasLocation === 'Yes') {
       getLocation();
+    } else {
+      setLocationName('');
+      setLat('');
+      setLong('');
+      setImageUri(null);
     }
   }, [hasLocation]);
 
   const handleOpenCamera = () => {
     launchCamera(
-      {
-        mediaType: 'photo',
-        cameraType: 'back',
-        saveToPhotos: true,
-      },
+      { mediaType: 'photo', cameraType: 'back', saveToPhotos: true },
       response => {
-        if (response.didCancel) {
-          console.log('User cancelled image picker');
-        } else if (response.errorCode) {
-          Alert.alert('Error', response.errorMessage || 'Camera error');
-        } else {
-          const uri = response.assets[0].uri;
-          setImageUri(uri);
+        if (response.didCancel) return;
+        if (response.errorCode) {
+          Alert.alert('Camera Error', response.errorMessage || 'Error opening camera');
+          return;
         }
-      },
+        if (response.assets && response.assets.length > 0) {
+          setImageUri(response.assets[0].uri);
+        }
+      }
     );
   };
 
   const handleSubmit = async () => {
+    setLoading(true);
 
-    setIsSubmitting(true); // Set the state to true when submission starts
+    const form = new FormData();
+
+    form.append('Question', 'Can you see any transmission line?');
+    form.append('Answer', hasLocation);
+    form.append('Transmission_Line_Name', hasLocation === 'Yes' ? locationName : null);
+    form.append('Researcher_Mobile', String(researcherMobile));
+    form.append('Kml_Name', name);
+    form.append('Form_No', formNumber);
+    form.append('State', selectedState);
+    form.append('District', selectedDistrict);
+    form.append('VillageName', selectedVillage);
+    form.append('Shapeid', shapeId);
+
+
+    form.append('Lat', hasLocation === 'Yes' ? String(lat) : '0');
+    form.append('Long', hasLocation === 'Yes' ? String(long) : '0');
+
+    // Image logic
+    if (hasLocation === 'Yes' && imageUri) {
+      const uriParts = imageUri.split('/');
+      const fileName = uriParts[uriParts.length - 1];
+      const fileType = fileName.split('.').pop();
+
+      form.append('ImagePh', {
+        uri: imageUri,
+        name: fileName,
+        type: `image/${fileType}`,
+      });
+    } else {
+      form.append('ImagePh', '');
+    }
+
     try {
-      const data = {
+      let response;
 
-        Question: 'Can you see any transmission line?',
-        photo: imageUri,
-        Answer: hasLocation,
-        Lat: hasLocation === 'Yes' ? parseFloat(lat) : null,
-        Long: hasLocation === 'Yes' ? parseFloat(long) : null,
-        Transmission_Line_Name: hasLocation === 'Yes' ? locationName : null,
-        Researcher_Mobile: Number(researcherMobile),
-        Kml_Name: name,
-        Form_No: formNumber,
-      };
+      if (recordId) {
+        // Update existing record
+        response = await axios.post(
+          `https://adfirst.in/api/Part1Question18/${recordId}`,
+          form,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+      } else {
+        // Create new record
+        response = await axios.post(
+          'https://adfirst.in/api/Part1Question18',
+          form,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
 
-      await axios.post('https://brandscore.in/api/Part1Question18', data);
-      Alert.alert('Success', 'Data submitted successfully!');
+        const newId = response?.data?.data?.id || response?.data?.data?.Id;
+        if (newId) {
+          setRecordId(newId);
+          updateFormData('part1question18', { id: newId });
+        }
+      }
+
+      // After update or create, update context state
+      const idToUse = recordId || response?.data?.data?.id || response?.data?.data?.Id;
+      if (idToUse) {
+        setRecordId(idToUse);
+        updateFormData('part1question18', {
+          id: idToUse,
+          hasLocation,
+          locationName,
+          lat: hasLocation === 'Yes' ? lat : '',
+          long: hasLocation === 'Yes' ? long : '',
+          imageUri: imageUri || null,
+        });
+      }
+
+      // Alert.alert('Success', recordId ? 'Record updated!' : 'Record created!');
       navigation.navigate('PartOneQues19', {
         name,
         researcherMobile,
-        formNumber
+        formNumber,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId
       });
     } catch (error) {
-      console.error('Submission Error:', error);
-      Alert.alert(error, 'Failed to submit data.');
+      console.error('Submit error:', error);
+      Alert.alert('Error', 'Failed to submit data.');
     } finally {
-      setIsSubmitting(false); // Reset the state after submission attempt
+      setLoading(false);
     }
   };
-
-  const isNextEnabled = hasLocation === 'No' || (hasLocation === 'Yes' && locationName);
+  // Enable submit if No selected or if Yes selected and locationName filled
+  const isNextEnabled = hasLocation === 'No' || (hasLocation === 'Yes' && locationName.trim() !== '');
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.question}>
-          Question 18
-        </Text>
-        <Text style={styles.question}>
-          Can you see any transmission line?
-        </Text>
-        <Text style={styles.question}>
-          (क्या आपको कोई ट्रांसमिशन लाइन नजर आ रही है?)
-        </Text>
+      <ScrollView contentContainerStyle={styles.innerContainer} keyboardShouldPersistTaps="handled">
+        <Text style={styles.question}>Question 18</Text>
+        <Text style={styles.question}>Can you see any transmission line?</Text>
+        <Text style={styles.question}>(क्या आपको कोई ट्रांसमिशन लाइन नजर आ रही है?)</Text>
 
         <TouchableOpacity
           style={[styles.optionButton, hasLocation === 'No' && styles.selectedOption]}
           onPress={() => setHasLocation('No')}
         >
-          <Text style={styles.optionText}>No (नहीं)</Text>
+          <Text style={[styles.optionText, hasLocation === 'No' && { color: '#fff' }]}>
+            No (नहीं)
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.optionButton, hasLocation === 'Yes' && styles.selectedOption]}
           onPress={() => setHasLocation('Yes')}
         >
-          <Text style={styles.optionText}>Yes (हाँ)</Text>
+          <Text style={[styles.optionText, hasLocation === 'Yes' && { color: '#fff' }]}>
+            Yes (हाँ)
+          </Text>
         </TouchableOpacity>
 
         {hasLocation === 'Yes' && (
@@ -164,23 +240,16 @@ const PartOneQues18 = ({ navigation, route }) => {
               <Text style={styles.cameraButtonText}>📷 Open Camera</Text>
             </TouchableOpacity>
 
-            {imageUri && (
-              <Image source={{ uri: imageUri }} style={styles.image} />
-            )}
+            {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
           </>
         )}
 
         <TouchableOpacity
-          style={[
-            styles.nextButton,
-            { opacity: isNextEnabled && !isSubmitting ? 1 : 0.5 }
-          ]}
+          style={[styles.nextButton, { opacity: isNextEnabled && !loading ? 1 : 0.5 }]}
           onPress={handleSubmit}
-          disabled={!isNextEnabled || isSubmitting}
+          disabled={!isNextEnabled || loading}
         >
-          <Text style={styles.nextButtonText}>
-            {isSubmitting ? 'Wait...' : 'Submit & Next'}
-          </Text>
+          <Text style={styles.nextButtonText}>{loading ? 'Wait...' : 'Next Page'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -190,32 +259,17 @@ const PartOneQues18 = ({ navigation, route }) => {
 export default PartOneQues18;
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    flexGrow: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-  },
-  question: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  innerContainer: { padding: 24, flexGrow: 1, justifyContent: 'center' },
+  question: { fontSize: 20, fontWeight: '600', marginBottom: 24, textAlign: 'center' },
   optionButton: {
     backgroundColor: '#ccc',
     padding: 14,
     borderRadius: 8,
     marginBottom: 12,
   },
-  selectedOption: {
-    backgroundColor: '#007bff',
-  },
-  optionText: {
-    color: '#fff',
-    fontSize: 16,
-    textAlign: 'center',
-  },
+  selectedOption: { backgroundColor: '#007bff' },
+  optionText: { color: '#000', fontSize: 16, textAlign: 'center' },
   input: {
     borderWidth: 1,
     borderColor: '#aaa',
@@ -224,27 +278,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
   },
-  coordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  label: {
-    fontWeight: 'bold',
-    marginRight: 8,
-    fontSize: 16,
-  },
-  coord: {
-    fontSize: 16,
-    color: '#333',
-  },
-  image: {
-    width: 200,
-    height: 200,
-    borderRadius: 12,
-    marginTop: 16,
-    alignSelf: 'center',
-  },
+  coordContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  label: { fontWeight: 'bold', marginRight: 8, fontSize: 16 },
+  coord: { fontSize: 16, color: '#333' },
   cameraButton: {
     backgroundColor: '#f0ad4e',
     paddingVertical: 10,
@@ -252,10 +288,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     alignItems: 'center',
   },
-  cameraButtonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
+  cameraButtonText: { color: '#fff', fontSize: 16 },
+  image: { width: 200, height: 200, borderRadius: 12, marginTop: 16, alignSelf: 'center' },
   nextButton: {
     backgroundColor: '#28a745',
     paddingVertical: 14,
@@ -263,8 +297,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 24,
   },
-  nextButtonText: {
-    color: '#fff',
-    fontSize: 18,
-  },
+  nextButtonText: { color: '#fff', fontSize: 18 },
 });

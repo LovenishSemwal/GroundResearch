@@ -1,23 +1,25 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import Video from 'react-native-video';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
+import { useFormData } from './FormDataContext';
 
 const PartOneQues4 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber } = route.params || {};
+  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { formData, updateFormData } = useFormData();
 
-  const [videoUri, setVideoUri] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false); // new state
+  // Directly use context video URI
+  const [videoUri, setVideoUri] = useState(formData.part1question4?.videoUri || null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Save videoUri in context
+  useEffect(() => {
+    updateFormData('part1question4', { videoUri });
+  }, [videoUri]);
 
   const openCameraForVideo = () => {
-    const options = {
-      mediaType: 'video',
-      videoQuality: 'high',
-      durationLimit: 60,
-      saveToPhotos: true,
-    };
-
+    const options = { mediaType: 'video', videoQuality: 'high', durationLimit: 60, saveToPhotos: true };
     launchCamera(options, response => {
       if (response.didCancel) {
         console.log('User cancelled video recording');
@@ -32,7 +34,6 @@ const PartOneQues4 = ({ navigation, route }) => {
 
   const openGalleryForVideo = () => {
     const options = { mediaType: 'video' };
-
     launchImageLibrary(options, response => {
       if (response.didCancel) {
         console.log('User cancelled video picker');
@@ -46,26 +47,61 @@ const PartOneQues4 = ({ navigation, route }) => {
   };
 
   const handleNext = async () => {
-    if (isSubmitting) return; // prevent multiple submits
+    if (isSubmitting || !videoUri) return;
     setIsSubmitting(true);
 
     try {
-      const payload = {
-        question: '360-degree video of the land',
-        land360Video: videoUri,
-        researcherMobile: Number(researcherMobile),
-        kmlName: name,
-        FormNo: String(formNumber),
-      };
+      const formDataToSend = new FormData();
+      formDataToSend.append('FormNo', String(formNumber));
+      formDataToSend.append('Question', '360-degree video of the land');
+      formDataToSend.append('ResearcherMobile', Number(researcherMobile));
+      formDataToSend.append('KmlName', name);
+      formDataToSend.append('State', selectedState);
+      formDataToSend.append('District', selectedDistrict);
+      formDataToSend.append('VillageName', selectedVillage);
+      formDataToSend.append('Shapeid', shapeId);
+      formDataToSend.append('Land360VideoFile', {
+        uri: videoUri,
+        name: `video_${Date.now()}.mp4`,
+        type: 'video/mp4',
+      });
 
-      const response = await axios.post("https://brandscore.in/api/Part1Question4", payload);
+      // Use existing ID directly from context
+      const existingId = formData.part1question4?.id;
+
+      let response;
+      if (existingId) {
+        response = await axios.post(`https://adfirst.in/api/Part1Question4/${existingId}`, formDataToSend, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        response = await axios.post('https://adfirst.in/api/Part1Question4', formDataToSend, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
 
       if (response.data.success) {
-        Alert.alert('Done', 'Data Submitted');
+        // Alert.alert('Done', 'Data Submitted');
         console.log('Data saved:', response.data.data);
-        navigation.navigate('PartOneQues5', { name, researcherMobile, formNumber }); 
+
+        // Update context with new videoUri & id
+        updateFormData('part1question4', {
+          videoUri,
+          id: response.data.data.id,
+        });
+
+        navigation.navigate('PartOneQues5', {
+          name,
+          researcherMobile,
+          formNumber,
+          selectedState,
+          selectedDistrict,
+          selectedVillage,
+          shapeId
+        });
       } else {
         console.error('Save failed:', response.data.message);
+        Alert.alert('Error', response.data.message);
       }
     } catch (error) {
       console.error('Error sending data:', error.message);
@@ -76,6 +112,7 @@ const PartOneQues4 = ({ navigation, route }) => {
   };
 
   return (
+    <ScrollView contentContainerStyle={styles.scrollContent}>
     <View style={styles.container}>
       <Text style={styles.title}>Question 4</Text>
       <Text style={styles.title}>360-degree video of the land</Text>
@@ -111,12 +148,19 @@ const PartOneQues4 = ({ navigation, route }) => {
         <Text style={styles.nextButtonText}>{isSubmitting ? 'Wait...' : 'Next Page'}</Text>
       </TouchableOpacity>
     </View>
+    </ScrollView>
   );
 };
 
 export default PartOneQues4;
 
 const styles = StyleSheet.create({
+   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     padding: 24,

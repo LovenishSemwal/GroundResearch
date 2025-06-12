@@ -30,7 +30,7 @@ const createInitialForm = () => ({
 
 const PartTwoQues2 = ({ navigation, route }) => {
   const {
-    name,
+    selectedLine,
     researcherMobile,
     formNumber,
     selectedState,
@@ -137,7 +137,7 @@ const PartTwoQues2 = ({ navigation, route }) => {
           OpinionCause: form.opinion === 'support' ? form.actionsSupport : form.actionsOpposition,
           ConcernsRegardingTheProject: JSON.stringify(form.concerns),
           ResearcherMobile: Number(researcherMobile),
-          KmlName: name,
+          KmlName: selectedLine,
           FormNo: formNumber,
           State: selectedState,
           Dist: selectedDistrict,
@@ -179,7 +179,7 @@ const PartTwoQues2 = ({ navigation, route }) => {
 
       // Alert.alert('Success', 'All data submitted successfully!');
       navigation.navigate('PartTwoQues3', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

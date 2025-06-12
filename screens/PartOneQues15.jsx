@@ -14,7 +14,7 @@ import {
 import { useFormData } from './FormDataContext';
 
 const PartOneQues15 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const existingData = formData.part1question15 || {};
@@ -42,7 +42,7 @@ const PartOneQues15 = ({ navigation, route }) => {
         question: 'Is this land or the nearby land owned by any local leader or influential person?',
         answer: answer,
         researcher_Mobile: Number(researcherMobile),
-        kml_Name: name,
+        kml_Name: selectedLine,
         Form_No: formNumber, State: selectedState,
         Dist: selectedDistrict,
         Village_Name: selectedVillage,
@@ -75,7 +75,7 @@ const PartOneQues15 = ({ navigation, route }) => {
       }
 
       navigation.navigate('PartOneQues16', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

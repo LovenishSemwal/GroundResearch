@@ -14,7 +14,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';
 
 const PartOneQues22 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const [railwayLine, setRailwayLine] = useState(formData.part1question22.railwayLine || '');
@@ -87,7 +87,7 @@ const PartOneQues22 = ({ navigation, route }) => {
       Lat: location.latitude,
       Long: location.longitude,
       Researcher_Mobile: Number(researcherMobile),
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Form_No: formNumber,
       Dist: selectedDistrict,
       State: selectedState,
@@ -117,7 +117,7 @@ const PartOneQues22 = ({ navigation, route }) => {
 
       // Alert.alert('Success', 'Data submitted successfully');
       navigation.navigate('PartOneQues23', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

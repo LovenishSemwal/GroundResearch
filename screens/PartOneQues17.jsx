@@ -14,7 +14,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';
 
 const PartOneQues17 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const initialSelectedOption = formData.part1question17?.selectedOption || '';
@@ -40,7 +40,7 @@ const PartOneQues17 = ({ navigation, route }) => {
       Question: 'Is there any dispute or legal case on the land (as per local information)?',
       Answer: selectedOption === 'Yes' ? `${selectedOption}: ${details}` : selectedOption,
       Researcher_Mobile: Number(researcherMobile),
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Form_No: formNumber,
       Dist:selectedDistrict,
       State:selectedState,
@@ -85,7 +85,7 @@ const PartOneQues17 = ({ navigation, route }) => {
       console.log('Data submitted:', response.data);
       // Alert.alert('Data submitted successfully!');
       navigation.navigate('PartOneQues18', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

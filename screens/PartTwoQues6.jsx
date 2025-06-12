@@ -14,7 +14,7 @@ import {
 import { useFormData } from './FormDataContext';  // import the context
 
 const PartTwoQues6 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const initialSelectedOption = formData.PartTwoQues6?.selectedOption || '';
@@ -41,7 +41,7 @@ const PartTwoQues6 = ({ navigation, route }) => {
       Question: 'Is any major project ongoing or being planned nearby (airport, roads, dams, solar, wind, defence, etc.)?',
       Answer: selectedOption,
       Details: selectedOption === 'Yes' ? details : '',
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Researcher_Mobile: Number(researcherMobile),
       Form_No: formNumber,
       Dist: selectedDistrict,
@@ -86,7 +86,7 @@ const PartTwoQues6 = ({ navigation, route }) => {
       console.log('Data submitted:', response.data);
       // Alert.alert('Data submitted successfully!');
       navigation.navigate('PartTwoQues7', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

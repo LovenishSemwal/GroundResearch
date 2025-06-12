@@ -15,7 +15,7 @@ import {
 import { useFormData } from './FormDataContext'; // import the context
 
 const PartTwoQuesFour = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Initialize from context if available
@@ -62,7 +62,7 @@ const PartTwoQuesFour = ({ navigation, route }) => {
       Question: 'How much compensation was received?',
       Answer: answer,
       Amount: answer === 'Yes' ? Number(numericInput) : null,
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Researcher_Mobile: Number(researcherMobile),
       Form_No: formNumber,
       Dist: selectedDistrict,
@@ -107,7 +107,7 @@ const PartTwoQuesFour = ({ navigation, route }) => {
       console.log('Data submitted:', response.data);
       // Alert.alert('Data submitted successfully!');
       navigation.navigate('PartTwoQues5', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

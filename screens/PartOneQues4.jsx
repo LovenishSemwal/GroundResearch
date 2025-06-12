@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';
 
 const PartOneQues4 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Directly use context video URI
@@ -55,7 +55,7 @@ const PartOneQues4 = ({ navigation, route }) => {
       formDataToSend.append('FormNo', String(formNumber));
       formDataToSend.append('Question', '360-degree video of the land');
       formDataToSend.append('ResearcherMobile', Number(researcherMobile));
-      formDataToSend.append('KmlName', name);
+      formDataToSend.append('KmlName', selectedLine);
       formDataToSend.append('State', selectedState);
       formDataToSend.append('District', selectedDistrict);
       formDataToSend.append('VillageName', selectedVillage);
@@ -91,7 +91,7 @@ const PartOneQues4 = ({ navigation, route }) => {
         });
 
         navigation.navigate('PartOneQues5', {
-          name,
+          selectedLine,
           researcherMobile,
           formNumber,
           selectedState,

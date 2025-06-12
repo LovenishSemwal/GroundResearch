@@ -10,7 +10,7 @@ const options = [
 ];
 
 const PartTwoQues5 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Initialize from context if available
@@ -57,7 +57,7 @@ const PartTwoQues5 = ({ navigation, route }) => {
       Question: 'Was there any issue during the acquisition?',
       Answer: answer,
       Details: answer === 'c' ? otherReason : '',
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Researcher_Mobile: Number(researcherMobile),
       Form_No: formNumber,
       Dist: selectedDistrict,
@@ -102,7 +102,7 @@ const PartTwoQues5 = ({ navigation, route }) => {
       console.log('Data submitted:', response.data);
       // Alert.alert('Data submitted successfully!');
       navigation.navigate('PartTwoQues6', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

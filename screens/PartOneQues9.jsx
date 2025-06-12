@@ -16,7 +16,7 @@ import { launchCamera } from 'react-native-image-picker';
 import { useFormData } from './FormDataContext';
 
 const DynamicFormWithPhotos = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [count, setCount] = useState(0);
   const [photos, setPhotos] = useState([]);
@@ -87,7 +87,7 @@ const DynamicFormWithPhotos = ({ navigation, route }) => {
       formDataToSend.append('Form_No', formNumber);
       formDataToSend.append('Question', 'What types of trees are there – name and photo');
       formDataToSend.append('Researcher_Mobile', researcherMobile.toString());
-      formDataToSend.append('Kml_Name', name);
+      formDataToSend.append('Kml_Name', selectedLine);
       formDataToSend.append('State', selectedState);
       formDataToSend.append('District', selectedDistrict);
       formDataToSend.append('VillageName', selectedVillage);
@@ -138,7 +138,7 @@ const DynamicFormWithPhotos = ({ navigation, route }) => {
 
       // Alert.alert('Data submitted successfully!');
       navigation.navigate('PartOneQues10', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';  // import the hook
 
 const PartOneQues3 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber,
+  const { selectedLine, researcherMobile, formNumber,
     selectedState, selectedDistrict, selectedVillage, shapeId
   } = route.params || {};
   const { formData, updateFormData } = useFormData();
@@ -75,7 +75,7 @@ const PartOneQues3 = ({ navigation, route }) => {
         type: 'image/jpeg',
       });
       form.append('researcherMobile', Number(researcherMobile));
-      form.append('kmlName', name);
+      form.append('kmlName', selectedLine);
       form.append('State', selectedState)
       form.append('District', selectedDistrict)
       form.append('VillageName', selectedVillage)
@@ -113,7 +113,7 @@ const PartOneQues3 = ({ navigation, route }) => {
 
         // Alert.alert('Done', 'Data Submitted');
         navigation.navigate('PartOneQues4', {
-          name,
+          selectedLine,
           researcherMobile,
           formNumber,
           selectedState,

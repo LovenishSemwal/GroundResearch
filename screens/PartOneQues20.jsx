@@ -19,7 +19,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';  // import the context
 
 const PartOneQues20 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Initialize local state with existing form data or defaults
@@ -123,7 +123,7 @@ const PartOneQues20 = ({ navigation, route }) => {
     form.append('Lat', hasLocation === 'Yes' ? lat : 0);
     form.append('Long', hasLocation === 'Yes' ? long : 0);
     form.append('Researcher_Mobile', String(researcherMobile));
-    form.append('Kml_Name', name);
+    form.append('Kml_Name', selectedLine);
     form.append('Form_No', formNumber);
     form.append('State', selectedState);
     form.append('District', selectedDistrict);
@@ -167,7 +167,7 @@ const PartOneQues20 = ({ navigation, route }) => {
 
       // Alert.alert('Success', 'Data submitted successfully');
       navigation.navigate('PartOneQues21', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

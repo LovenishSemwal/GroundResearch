@@ -14,7 +14,7 @@ import {
 import { useFormData } from './FormDataContext'; // import the context
 
 const PartOneQues12 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Use part1question12 data from context or fallback to empty
@@ -42,7 +42,7 @@ const PartOneQues12 = ({ navigation, route }) => {
       Question: "Does the area fall within wildlife corridors (especially Great Indian Bustard)?",
       Answer: selectedOption === 'Yes' ? `${selectedOption}: ${details}` : selectedOption,
       Researcher_Mobile: Number(researcherMobile),
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Form_No: formNumber,
       State:selectedState,
       Dist:selectedDistrict,
@@ -86,7 +86,7 @@ const PartOneQues12 = ({ navigation, route }) => {
       console.log('Data submitted:', response.data);
       // Alert.alert('Data submitted successfully!');
       navigation.navigate('PartOneQues13', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

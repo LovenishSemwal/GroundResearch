@@ -1,78 +1,108 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Alert, BackHandler } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, BackHandler } from 'react-native';
 import axios from 'axios';
-
 import { useFormData } from './FormDataContext';  // context hook!
 
 const ButtonsScreen = ({ navigation, route }) => {
-  const { researcherMobile, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
-
+  const { selectedLine, researcherMobile, selectedState, selectedDistrict, selectedVillage, shapeId, } = route.params || {};
   const { resetFormData } = useFormData();  // Get the reset function
 
-  const [loading, setLoading] = useState(false);
+  // Separate loading states!
+  const [loadingPart1, setLoadingPart1] = useState(false);
+  const [loadingPart2, setLoadingPart2] = useState(false);
 
   useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      return true;
-    });
-
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => true);
     return () => backHandler.remove();
   }, []);
 
-
   const exitPress = () => {
     navigation.navigate('Login');
-  }
+  };
 
+
+  // FOR PART 1
   const handlePress = async () => {
     console.log({
-    selectedState,
-    selectedDistrict,
-    selectedVillage,
-    shapeId,
-    researcherMobile,
-  });
-    // if (!selectedState || !selectedDistrict || !selectedVillage || !shapeId || !researcherMobile ) {
-    //   Alert.alert('Error', 'Please make sure all fields are selected and filled.');
-    //   // return;  // Stop further execution if validation fails
-    // }
-    //  Reset all forms!
-    resetFormData();
+      partType: 'part1'
+    });
 
-    setLoading(true);
+    resetFormData();
+    setLoadingPart1(true);
 
     try {
       const response = await axios.post('https://adfirst.in/api/FormEntry', {
-        State: selectedState,
-        Dist: selectedDistrict,
-        Village_Name: selectedVillage,
-        Shape_Id: shapeId,
-        ResearcherMobile: researcherMobile,
+        selectedLine,
+        researcherMobile,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId,
+        partType: 'part1'
       });
 
       const { formNumber } = response.data;
 
       navigation.navigate('PartOneQues1', {
-
+        formNumber,       
+        selectedLine,
+        researcherMobile,
         formNumber,
         selectedState,
         selectedDistrict,
         selectedVillage,
         shapeId,
-        researcherMobile,
+        partType: 'part1'
       });
 
     } catch (error) {
-      if (error.response) {
-        console.error('Server responded with:', error.response.status);
-        console.error('Data:', error.response.data);
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-      } else {
-        console.error('Error setting up request:', error.message);
-      }
+      console.error('Error:', error);
     } finally {
-      setLoading(false);
+      setLoadingPart1(false);
+    }
+  };
+
+
+  //  FOR PART 2 -----
+  const villagePress = async () => {
+    console.log({
+      partType: 'part2'
+    });
+
+    resetFormData();
+    setLoadingPart2(true);
+
+    try {
+      const response = await axios.post('https://adfirst.in/api/FormEntry', {
+        
+       
+        selectedLine,
+        researcherMobile,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId,
+        partType: 'part2'
+      });
+
+      const { formNumber } = response.data;
+
+      navigation.navigate('PartTwoQues1', {
+        formNumber,
+        selectedLine,
+        researcherMobile,
+        formNumber,
+        selectedState,
+        selectedDistrict,
+        selectedVillage,
+        shapeId,
+        partType: 'part2'
+      });
+
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoadingPart2(false);
     }
   };
 
@@ -84,14 +114,25 @@ const ButtonsScreen = ({ navigation, route }) => {
     >
       <View style={styles.container}>
         <Text style={styles.mainheading}>Ground Research & RoW Intelligence</Text>
-        <Text style={styles.heading}>Part 1- KM Wise Questionnaire & Part 2- Village Level Report</Text>
+        <Text style={styles.heading}>Part 1- KM Wise Questionnaire  </Text>
+        <Text style={styles.heading}>Part 2- Village Level Report  </Text>
 
+        {/* PART 1 BUTTON */}
         <TouchableOpacity
-          style={[styles.button, loading && { backgroundColor: '#aaa' }]}
+          style={[styles.button, loadingPart1 && { backgroundColor: '#aaa' }]}
           onPress={handlePress}
-          disabled={loading}
+          disabled={loadingPart1}
         >
-          <Text style={styles.buttonText}>{loading ? 'Wait...' : 'Click'}</Text>
+          <Text style={styles.buttonText}>{loadingPart1 ? 'Wait...' : 'Part 1'}</Text>
+        </TouchableOpacity>
+
+        {/* PART 2 BUTTON */}
+        <TouchableOpacity
+          style={[styles.button, loadingPart2 && { backgroundColor: '#aaa' }]}
+          onPress={villagePress}
+          disabled={loadingPart2}
+        >
+          <Text style={styles.buttonText}>{loadingPart2 ? 'Wait...' : 'Part 2'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.button} onPress={exitPress}>

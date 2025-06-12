@@ -14,7 +14,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';
 
 const PartOneQues10 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Pull part1question10 data from context
@@ -52,7 +52,7 @@ const PartOneQues10 = ({ navigation, route }) => {
         Date_Of_Acquire: yearAcquired ? new Date(`${yearAcquired}`) : null,
         Compensation: compensationGiven === 'Yes' ? compensationRate : 'No',
         Researcher_Mobile: Number(researcherMobile),
-        Kml_Name: name,
+        Kml_Name: selectedLine,
         Form_No: formNumber,
         State: selectedState,
         Dist: selectedDistrict,
@@ -83,7 +83,7 @@ const PartOneQues10 = ({ navigation, route }) => {
       // Alert.alert('Data saved successfully!');
 
       navigation.navigate('PartOneQues11', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

@@ -28,7 +28,7 @@ const LoginScreen = ({ navigation }) => {
         const researcherData = response.data.data;
         // Alert.alert(JSON.stringify(researcherData))
         // Alert.alert('KMLForm', response.data.message);
-        navigation.navigate('KmlForm', { researcherData });
+        navigation.navigate('LineandVillage', { researcherData });
       } else {
         Alert.alert('Error', response.data.message || 'Invalid login');
       }

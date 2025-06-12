@@ -14,7 +14,7 @@ import {
 import { useFormData } from './FormDataContext';  // import the context
 
 const PartTwoQues3 = ({ navigation, route }) => {
-    const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+    const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
     const { formData, updateFormData } = useFormData();
 
     // Pull initial values and record id from context state
@@ -43,7 +43,7 @@ const PartTwoQues3 = ({ navigation, route }) => {
             Was_Land_Acquired_In_Project: selectedOption,
             Details: selectedOption === 'Yes' ? details : '',
             Researcher_Mobile: Number(researcherMobile),
-            Kml_Name: name,
+            Kml_Name: selectedLine,
             Form_No: formNumber,
             Dist: selectedDistrict,
             State: selectedState,
@@ -87,7 +87,7 @@ const PartTwoQues3 = ({ navigation, route }) => {
             console.log('Data submitted:', response.data);
             // Alert.alert('Data submitted successfully!');
             navigation.navigate('PartTwoQues4', {
-                name,
+                selectedLine,
                 researcherMobile,
                 formNumber,
                 selectedState,

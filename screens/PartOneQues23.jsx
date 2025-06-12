@@ -14,7 +14,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';
 
 const PartOneQues23 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Initialize state from context (with fallback)
@@ -44,7 +44,7 @@ const PartOneQues23 = ({ navigation, route }) => {
       Answer: selectedOption,
       Details: selectedOption === 'Yes' ? details.trim() : '',
       Researcher_Mobile: Number(researcherMobile),
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Form_No: formNumber,
       Dist: selectedDistrict,
       State: selectedState,
@@ -84,7 +84,7 @@ const PartOneQues23 = ({ navigation, route }) => {
       }
 
       navigation.navigate('PartOneQues24', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

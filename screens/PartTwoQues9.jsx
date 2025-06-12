@@ -14,7 +14,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';
 
 const PartTwoQues6 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Pre-fill from context (if re-visiting the page)
@@ -28,10 +28,10 @@ const PartTwoQues6 = ({ navigation, route }) => {
       selectedOption,
       details,
       formNumber,
-      name,
+      selectedLine,
       researcherMobile,
     });
-  }, [selectedOption, details, formNumber, name, researcherMobile]);
+  }, [selectedOption, details, formNumber, selectedLine, researcherMobile]);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -39,7 +39,7 @@ const PartTwoQues6 = ({ navigation, route }) => {
       const payload = {
         Question: selectedOption === 'No' ? 'No (High Risk नहीं है)' : 'Yes (High Risk है)',
         Details: selectedOption === 'Yes' ? details.trim() : '',
-        Kml_Name: name,
+        Kml_Name: selectedLine,
         Researcher_Mobile: Number(researcherMobile),
         Form_No: formNumber,
         Dist: selectedDistrict,
@@ -69,18 +69,18 @@ const PartTwoQues6 = ({ navigation, route }) => {
           selectedOption,
           details,
           formNumber,
-          name,
+          selectedLine,
           researcherMobile,
         });
 
         // Alert.alert('Success', 'Your response has been submitted!');
         navigation.navigate('Select', {
-          name,
-          researcherMobile,
-          selectedState,
-          selectedDistrict,
-          selectedVillage,
-          shapeId
+          // selectedLine,
+          // researcherMobile,
+          // selectedState,
+          // selectedDistrict,
+          // selectedVillage,
+          // shapeId
         });
       } else {
         Alert.alert('Error', 'Failed to submit. Please try again.');

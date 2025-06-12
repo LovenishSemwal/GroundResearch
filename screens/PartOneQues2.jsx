@@ -5,7 +5,7 @@ import Geolocation from 'react-native-geolocation-service';
 import { useFormData } from './FormDataContext'; // import context hook
 
 const PartOneQues2 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const [loading, setLoading] = useState(false);
@@ -81,7 +81,7 @@ const PartOneQues2 = ({ navigation, route }) => {
       question: 'Latitude and Longitude',
       latitude: location.latitude,
       longitude: location.longitude,
-      kmlName: name,
+      kmlName: selectedLine,
       researcherMobile: Number(researcherMobile),
       State:selectedState,
       Dist:selectedDistrict,
@@ -123,7 +123,7 @@ const PartOneQues2 = ({ navigation, route }) => {
 
         // Alert.alert('Done', 'Data Submitted');
         navigation.navigate('PartOneQues3', { 
-          name,
+          selectedLine,
           researcherMobile,
           formNumber,
           selectedState,

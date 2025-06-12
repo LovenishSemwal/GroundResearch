@@ -18,7 +18,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';
 
 const PartOneQues18 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Initialize local states with context data or defaults
@@ -103,7 +103,7 @@ const PartOneQues18 = ({ navigation, route }) => {
     form.append('Answer', hasLocation);
     form.append('Transmission_Line_Name', hasLocation === 'Yes' ? locationName : null);
     form.append('Researcher_Mobile', String(researcherMobile));
-    form.append('Kml_Name', name);
+    form.append('Kml_Name', selectedLine);
     form.append('Form_No', formNumber);
     form.append('State', selectedState);
     form.append('District', selectedDistrict);
@@ -170,7 +170,7 @@ const PartOneQues18 = ({ navigation, route }) => {
 
       // Alert.alert('Success', recordId ? 'Record updated!' : 'Record created!');
       navigation.navigate('PartOneQues19', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

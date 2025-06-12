@@ -12,7 +12,7 @@ const options = [
 ];
 
 const PartOneQues5 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const { control, handleSubmit, setValue, watch } = useForm({
@@ -37,9 +37,9 @@ const PartOneQues5 = ({ navigation, route }) => {
     const payload = {
       question: "How is the area?",
       answer: data.answer,
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Researcher_Mobile: Number(researcherMobile),
-      FormNo: formNumber,
+      Form_No: formNumber,
       State: selectedState,
       Dist: selectedDistrict,
       Village_Name: selectedVillage,
@@ -78,7 +78,7 @@ const PartOneQues5 = ({ navigation, route }) => {
 
         // Alert.alert("Success", "Data saved successfully!");
         navigation.navigate("PartOneQues6", {
-          name,
+          selectedLine,
           researcherMobile,
           formNumber,
           selectedState,

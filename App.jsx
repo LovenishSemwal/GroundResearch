@@ -3,7 +3,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { FormDataProvider } from './screens/FormDataContext';
 import LoginScreen from './screens/LoginScreen';
-import KmlForm from './screens/KmlForm';
+import LineandVillage from './screens/LineandVillage';
+// import Village from './screens/Village';
 import ButtonsScreen from './screens/ButtonsScreen';
 import PartOneQues1 from './screens/PartOneQues1';
 import PartOneQues2 from './screens/PartOneQues2';
@@ -50,8 +51,9 @@ const App = () => {
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Login">
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="KmlForm" component={KmlForm} options={{ headerShown: true }} />
           <Stack.Screen name="Select" component={ButtonsScreen} options={{headerShown: false }} />
+          <Stack.Screen name="LineandVillage" component={LineandVillage} options={{ headerShown: true }} />
+          {/* <Stack.Screen name="Village" component={Village} options={{ headerShown: true }} /> */}
           <Stack.Screen name="PartOneQues1" component={PartOneQues1} options={{ title:"Previous"}} />
 
           <Stack.Screen name="PartOneQues2" component={PartOneQues2} options={{ title:"Previous" }} />

@@ -12,7 +12,7 @@ const options = [
 ];
 
 const PartOneQues7 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId   } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId   } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const { control, handleSubmit, setValue, watch } = useForm({
@@ -35,7 +35,7 @@ const PartOneQues7 = ({ navigation, route }) => {
     const postData = {
       Question: 'How many crops are grown in a year?',
       Answer: data.answer,
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Researcher_Mobile: Number(researcherMobile),
       Form_No: formNumber,
       State:selectedState,
@@ -75,7 +75,7 @@ const PartOneQues7 = ({ navigation, route }) => {
         console.log('Data saved:', response.data);
         // Alert.alert('Done', 'Data submitted successfully');
         navigation.navigate('PartOneQues8', {
-          name,
+          selectedLine,
           researcherMobile,
           formNumber,
           selectedState,

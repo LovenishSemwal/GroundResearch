@@ -23,7 +23,7 @@ const optionsList = [
 ];
 
 const PartTwoQues8 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const [loading, setLoading] = useState(false);
@@ -63,7 +63,7 @@ const PartTwoQues8 = ({ navigation, route }) => {
       Question:
         "It is the land area through which the transmission line will pass. Here, our objective is to identify the villages and areas where the project team might face opposition. According to you, in which category should this village be placed?",
       Answer: data.selectedOptions.join('; '),
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Researcher_Mobile: Number(researcherMobile),
       Form_No: formNumber,
       Dist: selectedDistrict,
@@ -110,7 +110,7 @@ const PartTwoQues8 = ({ navigation, route }) => {
       }
 
       navigation.navigate('PartTwoQues9', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

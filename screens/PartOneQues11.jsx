@@ -14,7 +14,7 @@ import {
 import { useFormData } from './FormDataContext';  // import the context
 
 const PartOneQues11 = ({ navigation, route }) => {
-    const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+    const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
     const { formData, updateFormData } = useFormData(); // use the context
     const [loading, setLoading] = useState(false);
 
@@ -42,7 +42,7 @@ const PartOneQues11 = ({ navigation, route }) => {
             Question: "Is there any dispute or legal case on the land?",
             Answer: selectedOption === 'Yes' ? `${selectedOption}: ${details}` : selectedOption,
             Researcher_Mobile: Number(researcherMobile),
-            Kml_Name: name,
+            Kml_Name: selectedLine,
             Form_No: formNumber,
             State: selectedState,
             Dist: selectedDistrict,
@@ -86,7 +86,7 @@ const PartOneQues11 = ({ navigation, route }) => {
             console.log('Data submitted:', response.data);
             // Alert.alert('Data submitted successfully!');
             navigation.navigate('PartOneQues12', {
-                name,
+                selectedLine,
                 researcherMobile,
                 formNumber,
                 selectedState,

@@ -12,7 +12,7 @@ const options = [
 ];
 
 const PartOneQues6 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId  } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId  } = route.params || {};
   const pageKey = 'part1question6';
   const { formData, updateFormData } = useFormData();
 
@@ -36,7 +36,7 @@ const PartOneQues6 = ({ navigation, route }) => {
     const postData = {
       question: "How is the land?",
       answer: data.answer,
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Researcher_Mobile: Number(researcherMobile),
       FormNo: formNumber,
       State:selectedState,
@@ -80,7 +80,7 @@ const PartOneQues6 = ({ navigation, route }) => {
 
         // Alert.alert("Success", "Data saved successfully!");
         navigation.navigate("PartOneQues7", {
-          name,
+          selectedLine,
           researcherMobile,
           formNumber,
           selectedState,

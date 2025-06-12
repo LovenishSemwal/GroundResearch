@@ -14,7 +14,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';
 
 const PartOneQues21 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,7 +96,7 @@ const PartOneQues21 = ({ navigation, route }) => {
       Long: Number(longitude),
       Type_Of_Road: roadCrossing === 'Yes' ? roadType : null,
       Researcher_Mobile: Number(researcherMobile),
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Form_No: Number(formNumber),
       Dist: selectedDistrict,
       State: selectedState,
@@ -130,7 +130,7 @@ const PartOneQues21 = ({ navigation, route }) => {
       }
 
       navigation.navigate('PartOneQues22', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         formNumber,

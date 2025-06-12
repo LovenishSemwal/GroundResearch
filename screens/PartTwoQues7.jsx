@@ -14,7 +14,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext'; // use the context
 
 const PartTwoQues7 = ({ navigation, route }) => {
-    const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+    const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
     const { formData: contextData, updateFormData } = useFormData();
 
     // Initialize problemMakers with context data if available or default value
@@ -85,7 +85,7 @@ const PartTwoQues7 = ({ navigation, route }) => {
                     background: entry.background,
                     mobile_No: Number(entry.mobile),
                     reason: entry.reason,
-                    kml_Name: name,
+                    kml_Name: selectedLine,
                     researcher_Mobile: Number(researcherMobile),
                     form_No: formNumber,
                     state: selectedState,
@@ -111,7 +111,7 @@ const PartTwoQues7 = ({ navigation, route }) => {
             updateFormData('PartTwoQues7', updated);
             // Alert.alert('All entries saved successfully!');
             navigation.navigate('PartTwoQues8', {
-                name,
+                selectedLine,
                 researcherMobile,
                 formNumber,
                 selectedState,

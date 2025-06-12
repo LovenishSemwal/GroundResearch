@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';
 
 const PartOneQues8 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const pageKey = 'part1question8';
   const { formData, updateFormData } = useFormData();
 
@@ -36,7 +36,7 @@ const PartOneQues8 = ({ navigation, route }) => {
     const payload = {
       Form_No: formNumber,
       Researcher_Mobile: Number(researcherMobile),
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       State:selectedState,
       District:selectedDistrict,
       VillageName:selectedVillage,
@@ -80,7 +80,7 @@ const PartOneQues8 = ({ navigation, route }) => {
         // Alert.alert('Done', 'Data submitted successfully');
         console.log('Submitted:', response.data);
         navigation.navigate('PartOneQues9', {
-          name,
+          selectedLine,
           researcherMobile,
           formNumber,
           selectedState,

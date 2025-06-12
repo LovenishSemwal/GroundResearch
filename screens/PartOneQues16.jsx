@@ -7,7 +7,7 @@ import {
 import { useFormData } from './FormDataContext';
 
 const PartOneQues16 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Load from context (with fallback)
@@ -36,7 +36,7 @@ const PartOneQues16 = ({ navigation, route }) => {
       question: 'What is the circle rate of this area?',
       answer: work,
       researcher_Mobile: Number(researcherMobile),
-      kml_Name: name,
+      kml_Name: selectedLine,
       Form_No: formNumber,
       Dist:selectedDistrict,
       State:selectedState,
@@ -69,7 +69,7 @@ const PartOneQues16 = ({ navigation, route }) => {
 
       // Navigate to next
       navigation.navigate('PartOneQues17', {
-        name,
+        selectedLine,
         researcherMobile,
         formNumber,
         selectedState,

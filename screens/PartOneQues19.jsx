@@ -14,7 +14,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';
 
 const PartOneQues19 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   // Local state
@@ -38,7 +38,7 @@ const PartOneQues19 = ({ navigation, route }) => {
       Question: "If yes, then when was it acquired and how much compensation was given?",
       Answer: acquisitionDetails,
       Researcher_Mobile: Number(researcherMobile),
-      Kml_Name: name,
+      Kml_Name: selectedLine,
       Form_No: formNumber,
       Dist: selectedDistrict,
       State: selectedState,
@@ -59,7 +59,7 @@ const PartOneQues19 = ({ navigation, route }) => {
             {
               text: 'OK',
               onPress: () => navigation.navigate('PartOneQues20', {
-                name,
+                selectedLine,
                 researcherMobile,
                 formNumber,
                 selectedState,
@@ -85,7 +85,7 @@ const PartOneQues19 = ({ navigation, route }) => {
             {
               text: 'OK',
               onPress: () => navigation.navigate('PartOneQues20', {
-                name,
+                selectedLine,
                 researcherMobile,
                 formNumber,
                 selectedState,

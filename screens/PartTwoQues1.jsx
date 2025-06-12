@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext'; // import the context
 
 const PartTwoQues1 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData: contextData, updateFormData } = useFormData();
 
   const [formData, setFormData] = useState({
@@ -23,7 +23,7 @@ const PartTwoQues1 = ({ navigation, route }) => {
     internalDisputeInVillageDetails: '',
     influentialCommunitiesAndCastes: '',
     ResearcherMobile: Number(researcherMobile),
-    KmlName: name,
+    KmlName: selectedLine,
     FormNo: formNumber,
     State: selectedState,
     Dist: selectedDistrict,
@@ -111,7 +111,7 @@ const PartTwoQues1 = ({ navigation, route }) => {
         updateFormData('PartTwoQues1', updatedData);
 
         navigation.navigate('PartTwoQues2', {
-          name,
+          selectedLine,
           researcherMobile,
           formNumber,
           selectedState,

@@ -12,7 +12,7 @@ const options = [
 ];
 
 const PartOneQues1 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState,selectedDistrict,selectedVillage,shapeId, } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState,selectedDistrict,selectedVillage,shapeId, } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const { control, handleSubmit, watch } = useForm({
@@ -31,7 +31,7 @@ const PartOneQues1 = ({ navigation, route }) => {
       const postData = {
         Question: 'Whose land is it?',
         Answer: data.answer,
-        KmlName: name,
+        KmlName: selectedLine,
         State: selectedState,
         ResearcherMobile: Number(researcherMobile),
         Dist:selectedDistrict,
@@ -79,7 +79,7 @@ const PartOneQues1 = ({ navigation, route }) => {
 
         // Alert.alert('Done', 'Data Submitted');
         navigation.navigate('PartOneQues2', {
-          name,
+          selectedLine,
           researcherMobile,
           formNumber,
           selectedState,

@@ -14,7 +14,7 @@ import axios from 'axios';
 import { useFormData } from './FormDataContext';  // import the context
 
 const PartOneQues24 = ({ navigation, route }) => {
-  const { name, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
+  const { selectedLine, researcherMobile, formNumber, selectedState, selectedDistrict, selectedVillage, shapeId } = route.params || {};
   const { formData, updateFormData } = useFormData();
 
   const [acquisitionDetails, setAcquisitionDetails] = useState(() => formData.part1question24.answer || '');
@@ -38,7 +38,7 @@ const PartOneQues24 = ({ navigation, route }) => {
         Question: 'What problem could arise in this area?',
         Answer: acquisitionDetails,
         Researcher_Mobile: Number(researcherMobile),
-        Kml_Name: name,
+        Kml_Name: selectedLine,
         Form_No: formNumber,
         Dist: selectedDistrict,
         State: selectedState,
@@ -59,7 +59,7 @@ const PartOneQues24 = ({ navigation, route }) => {
             {
               text: 'OK',
               onPress: () => navigation.navigate('PartTwoQues1', {
-                name,
+                selectedLine,
                 researcherMobile,
                 formNumber,
                 selectedState,
@@ -84,14 +84,14 @@ const PartOneQues24 = ({ navigation, route }) => {
           Alert.alert('Success', 'KM Wise Questionnaire is complete', [
             {
               text: 'OK',
-              onPress: () => navigation.navigate('PartTwoQues1', {
-                name,
-                researcherMobile,
-                formNumber,
-                selectedState,
-                selectedDistrict,
-                selectedVillage,
-                shapeId
+              onPress: () => navigation.navigate('Select', {
+                // selectedLine,
+                // researcherMobile,
+                // formNumber,
+                // selectedState,
+                // selectedDistrict,
+                // selectedVillage,
+                // shapeId
               }),
             },
           ]);

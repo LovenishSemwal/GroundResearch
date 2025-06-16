@@ -97,7 +97,7 @@ const PartOneQues21 = ({ navigation, route }) => {
       Type_Of_Road: roadCrossing === 'Yes' ? roadType : null,
       Researcher_Mobile: Number(researcherMobile),
       Kml_Name: selectedLine,
-      Form_No: Number(formNumber),
+      Form_No: String(formNumber),
       Dist: selectedDistrict,
       State: selectedState,
       Village_Name: selectedVillage,
@@ -116,7 +116,7 @@ const PartOneQues21 = ({ navigation, route }) => {
           dataToSend
         );
         console.log('Update response:', response.data);
-        Alert.alert('Success', 'Data updated successfully');
+        // Alert.alert('Success', 'Data updated successfully');
       } else {
         // Create
         response = await axios.post('https://adfirst.in/api/Part1Question21', dataToSend);

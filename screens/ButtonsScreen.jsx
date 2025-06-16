@@ -21,7 +21,7 @@ const ButtonsScreen = ({ navigation, route }) => {
   };
 
 
-  // FOR PART 1
+  // FOR Part 1
   const handlePress = async () => {
     console.log({
       partType: 'part1'

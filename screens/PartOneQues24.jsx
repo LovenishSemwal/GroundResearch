@@ -84,7 +84,7 @@ const PartOneQues24 = ({ navigation, route }) => {
           Alert.alert('Success', 'KM Wise Questionnaire is complete', [
             {
               text: 'OK',
-              onPress: () => navigation.navigate('Select', {
+              onPress: () => navigation.navigate('LineandVillage', {
                 // selectedLine,
                 // researcherMobile,
                 // formNumber,

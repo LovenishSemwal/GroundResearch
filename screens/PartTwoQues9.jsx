@@ -54,11 +54,13 @@ const PartTwoQues6 = ({ navigation, route }) => {
         // Update existing entry
         response = await axios.post(
           `https://adfirst.in/api/Part2Question9/update/${formData.part2question9.id}`,
-          { ...payload, Id: formData.part2question9.id }
+          { ...payload, Id: formData.part2question9.id },
+          
         );
       } else {
         // New entry
         response = await axios.post('https://adfirst.in/api/Part2Question9', payload);
+        Alert.alert("Village Vise Survey Complete")
       }
 
       if (response.status === 200) {
@@ -74,7 +76,7 @@ const PartTwoQues6 = ({ navigation, route }) => {
         });
 
         // Alert.alert('Success', 'Your response has been submitted!');
-        navigation.navigate('Select', {
+        navigation.navigate('LineandVillage', {
           // selectedLine,
           // researcherMobile,
           // selectedState,

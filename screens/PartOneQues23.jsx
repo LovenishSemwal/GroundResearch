@@ -65,7 +65,7 @@ const PartOneQues23 = ({ navigation, route }) => {
           }
         );
 
-        Alert.alert('Success', 'Data updated successfully');
+        // Alert.alert('Success', 'Data updated successfully');
         console.log('Updated:', response.data);
 
       } else {

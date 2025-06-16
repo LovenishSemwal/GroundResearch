@@ -183,7 +183,7 @@ const PartOneQues20 = ({ navigation, route }) => {
     }
   };
 
-  const isNextEnabled = hasLocation === 'No' || (hasLocation === 'Yes' && locationName.trim() !== '');
+  const isNextEnabled = hasLocation === 'No' || (hasLocation === 'Yes' && locationName.trim() !== '' && imageUri);
 
   return (
     <KeyboardAvoidingView

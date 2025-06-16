@@ -136,7 +136,7 @@ const PartTwoQues7 = ({ navigation, route }) => {
                 contentContainerStyle={styles.container}
                 keyboardShouldPersistTaps="handled"
             >
-                <Text style={styles.question}>Question</Text>
+                <Text style={styles.question}>Part2: Question 7</Text>
                 <Text style={styles.question}>Who can create problems in land acquisition?</Text>
                 <Text style={styles.question}>(कौन जमीन अधिग्रहण में समस्या खड़ी कर सकता है?)</Text>
 
@@ -197,7 +197,7 @@ const PartTwoQues7 = ({ navigation, route }) => {
                     onPress={handleNext}
                     disabled={!isNextEnabled || loading}
                 >
-                    <Text style={styles.nextButtonText}>{loading ? 'Wait...' : 'Submit & Next'}</Text>
+                    <Text style={styles.nextButtonText}>{loading ? 'Wait...' : 'Next Page'}</Text>
                 </TouchableOpacity>
             </ScrollView>
         </KeyboardAvoidingView>

@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, BackHandler } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  BackHandler,
+} from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
   const { control, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      return true;
-    });
-
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => true);
     return () => backHandler.remove();
   }, []);
 
@@ -19,20 +25,23 @@ const LoginScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const response = await axios.post(
-        'https://adfirst.in/api/VillageCsv/LoginResearcher', // Change to POST and your correct endpoint
-        { mobile: data.phone } // Sending as POST body
+        'https://adfirst.in/api/VillageCsv/LoginResearcher',
+        { mobile: data.phone }
       );
 
       if (response.data.success) {
-        console.log("Full response:", response.data);
         const researcherData = response.data.data;
-        // Alert.alert(JSON.stringify(researcherData))
-        // Alert.alert('KMLForm', response.data.message);
-        navigation.navigate('LineandVillage', { researcherData });
+
+        // Save to AsyncStorage for use in LineandVillage
+        await AsyncStorage.setItem('researcherData', JSON.stringify(researcherData));
+
+        // Navigate without passing any data
+        navigation.navigate('LineandVillage');
       } else {
         Alert.alert('Error', response.data.message || 'Invalid login');
       }
     } catch (error) {
+      console.error('Login error:', error);
       if (error.response) {
         Alert.alert('Error', error.response.data.message || 'Something went wrong');
       } else {
@@ -77,7 +86,7 @@ const LoginScreen = ({ navigation }) => {
         onPress={handleSubmit(onSubmit)}
         disabled={loading}
       >
-        <Text style={styles.buttonText}>{loading ? 'Wait...' : 'Login'}</Text>
+        <Text style={styles.buttonText}>{loading ? 'Please wait...' : 'Login'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -94,7 +103,7 @@ const styles = StyleSheet.create({
   },
   mainheading: {
     fontSize: 32,
-    fontWeight: 'black',
+    fontWeight: 'bold',
     marginBottom: 32,
     textAlign: 'center',
   },

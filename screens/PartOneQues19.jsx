@@ -27,85 +27,73 @@ const PartOneQues19 = ({ navigation, route }) => {
   }, [acquisitionDetails]);
 
   const handleSubmit = async () => {
-    if (!acquisitionDetails) {
-      Alert.alert('Validation', 'Please fill in the answer');
-      return;
-    }
+  if (!acquisitionDetails) {
+    // Optionally keep this validation alert if you want
+    Alert.alert('Validation', 'Please fill in the answer');
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    const payload = {
-      Question: "If yes, then when was it acquired and how much compensation was given?",
-      Answer: acquisitionDetails,
-      Researcher_Mobile: Number(researcherMobile),
-      Kml_Name: selectedLine,
-      Form_No: formNumber,
-      Dist: selectedDistrict,
-      State: selectedState,
-      Village_Name: selectedVillage,
-      Shape_Id: shapeId,
-    };
-
-    try {
-      if (formData.part1question19.id) {
-        // Update existing record
-        const updateResponse = await axios.post(
-          `https://adfirst.in/api/Part1Question19/update/${formData.part1question19.id}`,
-          { ...payload, Id: formData.part1question19.id }
-        );
-
-        if (updateResponse.data.success) {
-          Alert.alert('Success', 'Record updated successfully!', [
-            {
-              text: 'OK',
-              onPress: () => navigation.navigate('PartOneQues20', {
-                selectedLine,
-                researcherMobile,
-                formNumber,
-                selectedState,
-                selectedDistrict,
-                selectedVillage,
-                shapeId
-              }),
-            },
-          ]);
-        } else {
-          Alert.alert('Error', 'Failed to update record.');
-        }
-      } else {
-        // Create new record
-        const createResponse = await axios.post(
-          'https://adfirst.in/api/Part1Question19',
-          payload
-        );
-
-        if (createResponse.status === 200 && createResponse.data.id) {
-          updateFormData('part1question19', { id: createResponse.data.id });
-          Alert.alert('Success', 'Data saved successfully!', [
-            {
-              text: 'OK',
-              onPress: () => navigation.navigate('PartOneQues20', {
-                selectedLine,
-                researcherMobile,
-                formNumber,
-                selectedState,
-                selectedDistrict,
-                selectedVillage,
-                shapeId
-              }),
-            },
-          ]);
-        } else {
-          Alert.alert('Error', 'Failed to save record.');
-        }
-      }
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Something went wrong while submitting data.');
-    } finally {
-      setLoading(false);
-    }
+  const payload = {
+    Question: "If yes, then when was it acquired and how much compensation was given?",
+    Answer: acquisitionDetails,
+    Researcher_Mobile: Number(researcherMobile),
+    Kml_Name: selectedLine,
+    Form_No: formNumber,
+    Dist: selectedDistrict,
+    State: selectedState,
+    Village_Name: selectedVillage,
+    Shape_Id: shapeId,
   };
+
+  try {
+    if (formData.part1question19.id) {
+      // Update existing record
+      const updateResponse = await axios.post(
+        `https://adfirst.in/api/Part1Question19/update/${formData.part1question19.id}`,
+        { ...payload, Id: formData.part1question19.id }
+      );
+
+      if (updateResponse.data.success) {
+        navigation.navigate('PartOneQues20', {
+          selectedLine,
+          researcherMobile,
+          formNumber,
+          selectedState,
+          selectedDistrict,
+          selectedVillage,
+          shapeId
+        });
+      }
+    } else {
+      // Create new record
+      const createResponse = await axios.post(
+        'https://adfirst.in/api/Part1Question19',
+        payload
+      );
+
+      if (createResponse.status === 200 && createResponse.data.id) {
+        updateFormData('part1question19', { id: createResponse.data.id });
+
+        navigation.navigate('PartOneQues20', {
+          selectedLine,
+          researcherMobile,
+          formNumber,
+          selectedState,
+          selectedDistrict,
+          selectedVillage,
+          shapeId
+        });
+      }
+    }
+  } catch (error) {
+    console.error(error);
+    // You can optionally show error UI here instead of an alert
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView
@@ -131,7 +119,7 @@ const PartOneQues19 = ({ navigation, route }) => {
           onPress={handleSubmit}
           disabled={!acquisitionDetails || loading}
         >
-          <Text style={styles.nextButtonText}>{loading ? 'Please wait...' : 'Next Page'}</Text>
+          <Text style={styles.nextButtonText}>{loading ? 'wait...' : 'Next Page'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

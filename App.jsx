@@ -52,7 +52,7 @@ const App = () => {
         <Stack.Navigator initialRouteName="Login">
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Select" component={ButtonsScreen} options={{headerShown: false }} />
-          <Stack.Screen name="LineandVillage" component={LineandVillage} options={{ headerShown: true }} />
+          <Stack.Screen name="LineandVillage" component={LineandVillage} options={{ headerShown: false }} />
           {/* <Stack.Screen name="Village" component={Village} options={{ headerShown: true }} /> */}
           <Stack.Screen name="PartOneQues1" component={PartOneQues1} options={{ title:"Previous"}} />
 

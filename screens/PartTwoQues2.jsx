@@ -141,7 +141,7 @@ const PartTwoQues2 = ({ navigation, route }) => {
           FormNo: formNumber,
           State: selectedState,
           Dist: selectedDistrict,
-          VillageName1: selectedVillage,
+          VillageName: selectedVillage,
           ShapeId: shapeId,
         };
 

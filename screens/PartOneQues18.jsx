@@ -186,7 +186,8 @@ const PartOneQues18 = ({ navigation, route }) => {
     }
   };
   // Enable submit if No selected or if Yes selected and locationName filled
-  const isNextEnabled = hasLocation === 'No' || (hasLocation === 'Yes' && locationName.trim() !== '');
+  const isNextEnabled = hasLocation === 'No' || (hasLocation === 'Yes' && locationName.trim() !== '' && imageUri);
+
 
   return (
     <KeyboardAvoidingView

@@ -38,9 +38,9 @@ const PartOneQues8 = ({ navigation, route }) => {
       Researcher_Mobile: Number(researcherMobile),
       Kml_Name: selectedLine,
       State:selectedState,
-      District:selectedDistrict,
-      VillageName:selectedVillage,
-      Shapeid:shapeId,
+      Dist:selectedDistrict,
+      Village_Name:selectedVillage,
+      Shape_Id:shapeId,
       Question: "Do crops grow?",
       Answer: data.mainQuestion === 'Yes'
         ? `Yes | Types: ${data.additionalQuestion1}, Names: ${data.additionalQuestion2}`

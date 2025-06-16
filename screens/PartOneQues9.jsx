@@ -22,24 +22,32 @@ const DynamicFormWithPhotos = ({ navigation, route }) => {
   const [photos, setPhotos] = useState([]);
   const { control, handleSubmit, setValue } = useForm();
   const { formData, updateFormData } = useFormData();
+  const [treeCountInput, setTreeCountInput] = useState(count.toString());
+
   const questionKey = 'part1question9';
 
   // On load: restore data
   useEffect(() => {
-    const savedData = formData[questionKey];
-    if (savedData) {
-      const savedNames = savedData.names || {};
-      const savedPhotos = savedData.photos || [];
-      const savedCount = savedPhotos.length || Object.keys(savedNames).length || 0;
+    let isFirstRun = true;
 
-      setCount(savedCount);
-      setPhotos(savedPhotos);
+    if (isFirstRun) {
+      const savedData = formData[questionKey];
+      if (savedData) {
+        const savedNames = savedData.names || {};
+        const savedPhotos = savedData.photos || [];
+        const savedCount = savedPhotos.length || Object.keys(savedNames).length || 0;
 
-      for (let i = 0; i < savedCount; i++) {
-        setValue(`input_${i}`, savedNames[`input_${i}`] || '');
+        setCount(savedCount);
+        setPhotos(savedPhotos);
+
+        for (let i = 0; i < savedCount; i++) {
+          setValue(`input_${i}`, savedNames[`input_${i}`] || '');
+        }
       }
+      isFirstRun = false;
     }
-  }, [formData, setValue]);
+  }, []);
+
 
   const handleCountChange = (num) => {
     setCount(num);
@@ -160,24 +168,32 @@ const DynamicFormWithPhotos = ({ navigation, route }) => {
       <Text style={styles.title}>Enter Number of Trees</Text>
       <Text style={styles.title}>(पेड़ों की संख्या दर्ज करें)</Text>
 
-      <View style={styles.countInputRow}>
+      <View style={[styles.countInputRow, { gap: 10 }]}>
         <TextInput
           style={styles.countInput}
           placeholder="Enter a number"
           keyboardType="numeric"
-          value={count.toString()}
-          onChangeText={(text) => {
-            if (text === '') {
-              setCount('');
-              setPhotos([]);
+          value={treeCountInput}
+          onChangeText={setTreeCountInput}
+        />
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#007BFF',
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            borderRadius: 8,
+          }}
+          onPress={() => {
+            const num = parseInt(treeCountInput, 10);
+            if (!isNaN(num) && num >= 0) {
+              handleCountChange(num);
             } else {
-              const num = parseInt(text, 10);
-              if (!isNaN(num) && num >= 0) {
-                handleCountChange(num);
-              }
+              Alert.alert('Please enter a valid number');
             }
           }}
-        />
+        >
+          <Text style={{ color: 'white', fontSize: 16 }}>Set</Text>
+        </TouchableOpacity>
       </View>
 
       <Text style={styles.title}>What types of trees are there – name and photo</Text>
@@ -220,10 +236,12 @@ const DynamicFormWithPhotos = ({ navigation, route }) => {
             (count !== 0 &&
               Array.from({ length: count }).some((_, i) => {
                 const fieldValue = control._formValues[`input_${i}`];
-                return !fieldValue || fieldValue.trim() === '';
+                const photoUri = photos[i];
+                return !fieldValue || fieldValue.trim() === '' || !photoUri;
               })
             )
           }
+
           onPress={handleSubmit(onSubmit)}
         >
           <Text style={styles.submitButtonText}>{isSubmitting ? 'Wait...' : 'Next Page'}</Text>

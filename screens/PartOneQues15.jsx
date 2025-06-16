@@ -62,7 +62,7 @@ const PartOneQues15 = ({ navigation, route }) => {
           payload
         );
         console.log('Updated successfully:', response.data);
-        Alert.alert('Data updated successfully!');
+        // Alert.alert('Data updated successfully!');
       } else {
         // CREATE
         response = await axios.post(
@@ -180,7 +180,7 @@ const PartOneQues15 = ({ navigation, route }) => {
           disabled={!isNextEnabled}
         >
           <Text style={styles.nextButtonText}>
-            {loading ? 'Wait...' : existingData.id ? 'Update & Next' : 'Next Page'}
+            {loading ? 'Wait...' : 'Next Page'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

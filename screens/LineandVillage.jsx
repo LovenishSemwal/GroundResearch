@@ -10,16 +10,11 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-const LineandVillage = ({ route, navigation }) => {
-  const { researcherData } = route.params || {};
-
-
-  // const [logs,setlogs]=useState([]);
-  const logs = useRef([])
-
-
+const LineandVillage = ({ navigation }) => {
+  const logs = useRef([]);
 
   const [researcherMobile, setResearcherMobile] = useState('');
   const [researcherName, setResearcherName] = useState('');
@@ -39,20 +34,41 @@ const LineandVillage = ({ route, navigation }) => {
   const [dropdownLinesVisible, setDropdownLinesVisible] = useState(false);
 
   const villageRef = useRef(null);
+  const [surveyedVillageData, setSurveyedVillageData] = useState(null);
 
+  // --- Load researcher data ---
   useEffect(() => {
-    if (researcherData) {
-      setResearcherName(researcherData.researcher_Name || '');
-      setResearcherMobile(researcherData.researcher_Mobile || '');
-    }
-  }, [researcherData]);
+    const loadResearcherData = async () => {
+      try {
+        const storedData = await AsyncStorage.getItem('researcherData');
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          setResearcherName(parsedData.researcher_Name || '');
+          setResearcherMobile(parsedData.researcher_Mobile || '');
+        }
+      } catch (err) {
+        console.error('Failed to load researcher data:', err);
+      }
+    };
+    loadResearcherData();
+  }, []);
 
+  // --- Load states and lines once researcher is loaded ---
   useEffect(() => {
-    if (researcherMobile) {
-      fetchStates();
-      fetchLines();
+  if (researcherMobile) {
+    fetchStates();
+    fetchLines();
+    fetchSurveyedVillageDataForAllLines(); // ✅ new line
+  }
+}, [researcherMobile]);
+
+  // --- Fetch surveyed data & shapeId if both are selected ---
+  useEffect(() => {
+    if (selectedLine && selectedVillage && researcherMobile) {
+      fetchShapeId();
+      // fetchSurveyedVillageData();
     }
-  }, [researcherMobile]);
+  }, [selectedLine, selectedVillage, researcherMobile]);
 
   const fetchStates = async () => {
     try {
@@ -61,49 +77,24 @@ const LineandVillage = ({ route, navigation }) => {
       setStatesList(states);
       const firstState = states[0] || '';
       setSelectedState(firstState);
-      if (firstState) {
-        fetchDistricts(firstState);
-      }
+      if (firstState) fetchDistricts(firstState);
     } catch (error) {
       console.error(error);
     }
   };
 
   const fetchDistricts = async (state) => {
-    if (!researcherMobile) return;
     try {
       const res = await axios.get('https://adfirst.in/api/VillageCsv/FilteredUniqueDists', {
-        params: {
-          state,
-          researcherMobile,
-        },
+        params: { state, researcherMobile },
       });
       const districts = res.data.data || [];
       setDistrictsList(districts);
-      const firstDistrict = districts[0] || '';
-      setSelectedDistrict(firstDistrict);
-      if (firstDistrict) {
-        fetchVillages(firstDistrict);
-      }
+      setSelectedDistrict(districts[0] || '');
     } catch (error) {
       console.error(error);
     }
   };
-
-  const fetchVillages = async (dist) => {
-    if (!researcherMobile) return;
-    try {
-      const res = await axios.get(
-        `https://adfirst.in/api/VillageCsv/FilteredUniqueVillages?dist=${encodeURIComponent(
-          dist
-        )}&researcherMobile=${encodeURIComponent(researcherMobile)}`
-      );
-      setVillagesList(res.data.data || []);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
 
   const fetchLines = async () => {
     try {
@@ -116,60 +107,113 @@ const LineandVillage = ({ route, navigation }) => {
     }
   };
 
-  const fetchShapeId = () => {
-  axios
-    .post('https://adfirst.in/api/VillageCsv/GetVillageAndShapeByLine', {
-      LINE: selectedLine,
+  // NEW: Fetch villages by selected line
+  const fetchVillagesByLine = async (line) => {
+    try {
+      const res = await axios.post('https://adfirst.in/api/VillageCsv/GetVillageAndShapeByLine', {
+        LINE: line,
+        Researcher_Mobile: researcherMobile,
+      });
+
+      const allVillages = res.data || [];
+      const allVillageNames = allVillages.map(v => v.villagE_NAME);
+
+      // Fetch surveyed villages with full data
+      const surveyedRes = await axios.post('https://adfirst.in/api/VillageCsv/GetSurveyedVillagesFull', {
+        Line: line,
+        Researcher_Mobile: researcherMobile,
+      });
+
+      const surveyedVillages = (surveyedRes.data || [])
+        .filter(v => v.hasPart1 && v.hasPart2)  //  Only remove villages that are FULLY completed
+        .map(v => (v.village_Name || '').trim().toLowerCase());
+
+      // Filter out only fully surveyed villages
+      const unsurveyed = allVillageNames.filter(village =>
+        !surveyedVillages.includes((village || '').trim().toLowerCase())
+      );
+
+      setVillagesList(unsurveyed);
+    } catch (error) {
+      console.error('Error fetching/filtering villages by line:', error.message);
+    }
+  };
+
+
+  const fetchShapeId = async () => {
+    try {
+      const res = await axios.post('https://adfirst.in/api/VillageCsv/GetVillageAndShapeByLine', {
+        LINE: selectedLine,
+        Researcher_Mobile: researcherMobile,
+      });
+
+      const normalize = (str) => (str || '').trim().toLowerCase();
+      const match = (res.data || []).find(item =>
+        normalize(item?.villagE_NAME) === normalize(selectedVillage)
+      );
+
+      if (match && match.shapE_ID) {
+        setShapeId(match.shapE_ID);
+        return match.shapE_ID;
+      } else {
+        // Alert.alert('Mismatch', 'Village not matched or shapE_ID missing.');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching SHAPE_ID:', error.message);
+      return null;
+    }
+  };
+
+  // const fetchSurveyedVillageData = async () => {
+  //   try {
+  //     const res = await axios.post('https://adfirst.in/api/VillageCsv/GetSurveyedVillagesFull', {
+  //       Line: selectedLine,
+  //       Researcher_Mobile: researcherMobile,
+  //       Village: selectedVillage,
+  //     });
+  //     setSurveyedVillageData(res.data);
+  //   } catch (error) {
+  //     console.error('Error fetching surveyed village data:', error.message);
+  //   }
+  // };
+
+  const fetchSurveyedVillageDataForAllLines = async () => {
+  try {
+    const res = await axios.post('https://adfirst.in/api/VillageCsv/GetSurveyedVillagesFull', {
       Researcher_Mobile: researcherMobile,
-    })
-    .then((res) => {
-      // logs.current.push(`there is a response: ${JSON.stringify(res.data)}`);
-      // logs.current.push(`shape id value: ${JSON.stringify(res.data.shapE_ID)}`);
-      
-      // const shape = res.data.SHAPE_ID || '';
-      setShapeId(res.data.shapE_ID);
-      // logs.current.push(`SHAPE_ID: ${shape}`);
-    })
-    .catch((error) => {
-      // logs.current.push(`it is in the catch block: ${JSON.stringify(error)}`);
-    });
+    });
+    setSurveyedVillageData(res.data);  // show all surveyed data
+  } catch (error) {
+    console.error('Error fetching all surveyed villages:', error.message);
+  }
 };
 
+  //
   const handleLineSelect = (line) => {
-    // console.log('Selected Line:  before setting', line);
-    // logs.current.push(`Selected Line:  before setting ${line}`)
-    setSelectedLine(prev => line);
-    // console.log('Selected Line:  after setting', selectedLine);
-    // logs.current.push(`Selected Line:  after setting ${selectedLine}`)
+    setSelectedLine(line);
+    setSelectedVillage('');
+    setShapeId('');
     setDropdownLinesVisible(false);
-    if (selectedVillage != '') {
-      fetchShapeId();
-      // console.log(selectedVillage);
-      // logs.current.push(selectedVillage)
-    }
-    else {
-      console.log('Selected Village is empty, not fetching shape ID');
-    }
+    fetchVillagesByLine(line);
+    // fetchSurveyedVillageDataForLine(line); // <-- fetch immediately after line selected
   };
 
   const handleVillageSelect = (village) => {
     setSelectedVillage(village);
     setDropdownVillagesVisible(false);
-    if (selectedLine!== '') 
-    {
-        // logs.current.push(`Selected Village: ${selectedLine}`);
-        fetchShapeId();
-    }
-    else{
-            // logs.current.push(`Selected Village:  the village is not sekectref ${selectedLine}`);
-
-    }
   };
 
+  const handleSubmit = async () => {
+    if (!selectedLine || !selectedVillage) {
+      Alert.alert('Validation Error', 'Please select both line and village.');
+      return;
+    }
 
-  const handleSubmit = () => {
-    if (!selectedVillage || !selectedLine) {
-      Alert.alert('Validation Error', 'Please select village and line.');
+    const id = await fetchShapeId();
+
+    if (!id) {
+      Alert.alert('Error', 'Unable to fetch SHAPE_ID. Please check your selection.');
       return;
     }
 
@@ -178,7 +222,7 @@ const LineandVillage = ({ route, navigation }) => {
       selectedDistrict,
       selectedVillage,
       selectedLine,
-      shapeId,
+      shapeId: id,
       researcherMobile,
     });
   };
@@ -201,7 +245,6 @@ const LineandVillage = ({ route, navigation }) => {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        {/* <Text style={styles.MainHeading}>Line Wise Questionnaire</Text> */}
         <Text style={styles.heading}>Welcome</Text>
         <Text style={styles.headingname}>{researcherName}</Text>
 
@@ -247,18 +290,43 @@ const LineandVillage = ({ route, navigation }) => {
           <Text style={styles.buttonText}>Next</Text>
         </TouchableOpacity>
 
-
-
-
-         {/* <View style={styles.logger}>
-        {logs.current.map((log, index) => (
-          <Text key={index} style={{ color: 'red' }}>{log}</Text>
-        ))}
-      </View> */}
+        {surveyedVillageData && (
+          <View style={{ marginTop: 20 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 10 }}>
+              Surveyed Villages Info:
+            </Text>
+            {Array.isArray(surveyedVillageData) ? (
+              surveyedVillageData.map((item, index) => (
+                <View
+                  key={index}
+                  style={{
+                    marginBottom: 15,
+                    padding: 15,
+                    backgroundColor: '#f0f8ff',
+                    borderRadius: 10,
+                    borderLeftWidth: 6,
+                    borderLeftColor: '#007BFF',
+                  }}
+                >
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>
+                    #{index + 1}
+                  </Text>
+                  <Text style={{ fontSize: 16, marginBottom: 6 }}>
+                    <Text style={{ fontWeight: 'bold' }}>Village:</Text> {item.village_Name} &nbsp;&nbsp;
+                    <Text style={{ fontWeight: 'bold' }}>Status:</Text> {item.hasPart2 ? 'Done' : 'Pending'}
+                  </Text>
+                  <Text style={{ fontSize: 16 }}>
+                    <Text style={{ fontWeight: 'bold' }}>Line:</Text> {item.kml_Name} &nbsp;&nbsp;
+                    <Text style={{ fontWeight: 'bold' }}>Status:</Text> {item.hasPart1 ? 'Done' : 'Pending'}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text>No data found.</Text>
+            )}
+          </View>
+        )}
       </ScrollView>
-
-     
-
     </KeyboardAvoidingView>
   );
 };
@@ -266,27 +334,10 @@ const LineandVillage = ({ route, navigation }) => {
 export default LineandVillage;
 
 const styles = StyleSheet.create({
-
-  logger:
-  {
-    padding: 13,
-    fontSize: 14,
-    fontColor: "red",
-    backgroundColor: '#000',
-
-
-  },
-
   container: {
     padding: 20,
     backgroundColor: '#fff',
     flexGrow: 1,
-  },
-  MainHeading: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#333',
   },
   heading: {
     fontSize: 24,

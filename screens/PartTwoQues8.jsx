@@ -20,6 +20,7 @@ const optionsList = [
   'It is a sensitive area (near temples, schools, graveyards)\n(संवेदनशील क्षेत्र हैं (मंदिरों, स्कूलों, कब्रिस्तानों के पास))',
   'There have been internal conflicts within the community\n(समाज में आपसी संघर्ष हुआ है)',
   'A prominent political leader has a house or land in the area\n(क्षेत्र में किसी बड़े नेता का घर या जमीन है)',
+  'No risk observed\n(कोई जोखिम नहीं देखा गया)'
 ];
 
 const PartTwoQues8 = ({ navigation, route }) => {
@@ -52,6 +53,11 @@ const PartTwoQues8 = ({ navigation, route }) => {
 
   const onSubmit = async (data) => {
     setLoading(true);
+
+    if (!data.selectedOptions || data.selectedOptions.length === 0) {
+      Alert.alert('Please select at least one option before proceeding.');
+      return;
+    }
 
     // Save data to context
     updateFormData('part2question8', {
@@ -92,7 +98,7 @@ const PartTwoQues8 = ({ navigation, route }) => {
           id: response.data.data.id,
           selectedOptions: data.selectedOptions,
         });
-        Alert.alert('Data Updated!');
+        // Alert.alert('Data Updated!');
       } else {
         // CREATE new record
         response = await axios.post(
@@ -189,7 +195,7 @@ const PartTwoQues8 = ({ navigation, route }) => {
         <TouchableOpacity
           style={styles.nextButton}
           onPress={handleSubmit(onSubmit)}
-          disabled={loading}
+          disabled={loading || selectedOptions.length === 0} 
         >
           <Text style={styles.nextButtonText}>{loading ? 'Wait...' : 'Next Page'}</Text>
         </TouchableOpacity>
